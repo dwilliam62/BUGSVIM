@@ -60,7 +60,7 @@ return {
       },
 
       header = headers.tsukinvim,
-      footer = " 2025 --> BUGS | CHAOS --> CODE --> COSMOS",
+      footer = " 2025 ❱ BUGS | CHAOS ❱ CODE ❱ COSMOS",
 
       content_hooks = {
         -- starter.gen_hook.adding_bullet(),
