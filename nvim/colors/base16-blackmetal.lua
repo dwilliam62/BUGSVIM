@@ -1,3 +1,9 @@
+--[[
+┳┓┓ ┏┓┏┓┓┏┓  ┳┳┓┏┓┏┳┓┏┓┓ 
+┣┫┃ ┣┫┃ ┃┫ ━━┃┃┃┣  ┃ ┣┫┃ 
+┻┛┗┛┛┗┗┛┛┗┛  ┛ ┗┗┛ ┻ ┛┗┗┛
+                         
+--]]
 -- Setup config & colors for base16 nvim
 
 -- Make sure the file exist
