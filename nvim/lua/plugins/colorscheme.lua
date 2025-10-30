@@ -3,6 +3,6 @@ return {
   lazy = false,
   priority = 1000,
   init = function()
-    vim.cmd[[colorscheme base16-blackmetal]]
+    vim.cmd[[colorscheme base16-gruber-darker]]
   end,
 }

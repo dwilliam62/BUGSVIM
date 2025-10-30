@@ -14,6 +14,7 @@ return {
     require('mason-null-ls').setup {
       ensure_installed = {
         'prettier', -- ts/js, markdown, html, css, formatter
+        'clang-format', -- C and cpp code formatter
         'eslint_d', -- ts/js linter
         'shfmt', -- Shell formatter
         'checkmake', -- linter for Makefiles
@@ -32,6 +33,7 @@ return {
       diagnostics.checkmake,
       diagnostics.golangci_lint,
       formatting.gofumpt,
+      formatting.clang_format,
       formatting.goimports_reviser,
       formatting.prettier.with { filetypes = { 'javascript', 'javascriptreact', 'typescript', 'typescriptreact', 'html', 'css', 'json', 'yaml', 'markdown' } },
       formatting.stylua,
