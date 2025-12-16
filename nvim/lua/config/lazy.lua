@@ -1,3 +1,8 @@
+-- ================================================================================================
+-- TITLE: installing lazy plugin manager
+-- ABOUT: Bootstarp and configure lazy.nvim plugin manager
+-- ================================================================================================
+
 -- Bootstrap lazy.nvim
 local lazypath = vim.fn.stdpath 'data' .. '/lazy/lazy.nvim'
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
@@ -15,17 +20,9 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
--- Make sure to setup `mapleader` and `maplocalleader` before
--- loading lazy.nvim so that mappings are correct.
--- This is also a good place to setup other settings (vim.opt)
-
--- Load keymaps
-require 'config.keymaps'
-
--- Load options
 require 'config.options'
-
--- Load the auto commands from the config/autocmds.lua file
+require 'config.globals'
+require 'config.keymaps'
 require 'config.autocmds'
 
 -- Setup lazy.nvim
@@ -34,56 +31,15 @@ require('lazy').setup {
     -- import your plugins
     { import = 'plugins' },
   },
-  -- Configure any other settings here. See the documentation for more details.
-  -- colorscheme that will be used when installing plugins.
-  install = { colorscheme = { 'base16-blackmetal' } },
-  change_detection = {
-    -- Don't notify us every time a change is made to the configuration
-    notify = false,
-  },
-  -- automatically check for plugin updates
-  checker = {
-    enabled = true,
-
-    -- Don't spam us with notification every time there is an update available
-    notify = false,
-  },
-
-  ui = {
-    -- a number <1 is a percentage., >1 is a fixed size
-    size = { width = 0.8, height = 0.8 },
-    wrap = true, -- wrap the lines in the ui
-    -- The border to use for the UI window. Accepts same border values as |nvim_open_win()|.
-    border = vim.g.border_style,
-    backdrop = 100,
-    title = ' 󰒲  Lazy ', ---@type string only works when border is not "none"
-    title_pos = 'center', ---@type "center" | "left" | "right"
-    -- Show pills on top of the Lazy window
-    pills = true, ---@type boolean
-    -- The border to use for the UI window. Accepts same border values as |nvim_open_win()|.
-    icons = {
-      cmd = ' ',
-      config = ' ',
-      event = ' ',
-      ft = '󰪷 ',
-      init = ' ',
-      import = '󰥝 ',
-      keys = '󰌌 ',
-      lazy = '󰒲 ',
-      loaded = ' ',
-      not_loaded = ' ',
-      plugin = ' ',
-      runtime = ' ',
-      require = '󰢱 ',
-      source = '󰳐 ',
-      start = ' ',
-      task = '✔ ',
-      list = {
-        '●',
-        '➜',
-        '★',
-        '‒',
-      },
+  rtp = {
+    disabled_plugins = {
+      'netrw',
+      'netrwPlugin',
     },
   },
+  -- Configure any other settings here. See the documentation for more details.
+  -- colorscheme that will be used when installing plugins.
+  install = { colorscheme = { 'tokyonight-night' } },
+  -- automatically check for plugin updates
+  checker = { enabled = true },
 }

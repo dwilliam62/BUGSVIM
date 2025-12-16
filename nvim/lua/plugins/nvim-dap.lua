@@ -1,3 +1,11 @@
+-- ================================================================================================
+-- TITLE : nvim-dap
+-- ABOUT : Debug Adapter Protocol client implementation for Neovim
+-- -- LINKS :
+--   > github :https://github.com/mfussenegger/nvim-dap
+-- ================================================================================================
+
+
 -- Set up icons
 -- stylua: ignore start
 local icons = {
@@ -31,25 +39,22 @@ return {
   dependencies = {
     'rcarriga/nvim-dap-ui',
     'nvim-neotest/nvim-nio',
-    { 'leoluz/nvim-dap-go', ft = 'go' },
   },
   keys = {
     -- stylua: ignore start
-    { '<leader>dt', function() require('dap').toggle_breakpoint() end, desc = '[D]ebug [T]oggle Breakpoint' },
-    { '<leader>ds', function() require('dap').continue() end,          desc = '[D]ebug [S]tart' },
-    { '<leader>dc', function() require('dapui').close() end,          desc = '[D]ebug [C]lose' },
-    { '<leader>dn', function() require('dap').step_over() end,        desc = '[D]ebug Step [N]ext' },
-    { '<leader>di', function() require('dap').step_into() end,        desc = '[D]ebug Step [I]nto' },
-    { '<leader>do', function() require('dap').step_out() end,         desc = '[D]ebug Step [O]ut' },
+    { '<leader>dt', function() require('dap').toggle_breakpoint() end, desc = 'Debug Toggle Breakpoint' },
+    { '<leader>ds', function() require('dap').continue() end, desc = 'Debug Start' },
+    { '<leader>dc', function() require('dapui').close() end, desc = 'Debug Close' },
+    { '<leader>dn', function() require('dap').step_over() end, desc = 'Debug Step Next' },
+    { '<leader>di', function() require('dap').step_into() end, desc = 'Debug Step Into' },
+    { '<leader>do', function() require('dap').step_out() end, desc = 'Debug Step Out' },
     -- stylua: ignore end
   },
   config = function()
     local dap = require 'dap'
     local dapui = require 'dapui'
-    local godap = require 'dap-go'
 
     dapui.setup() -- Set up dapui
-    godap.setup() -- Set up go debugger
 
     dap.configurations.java = {
       {

@@ -1,11 +1,7 @@
 -- ================================================================================================
--- TITLE : nvim-jdtls.nvim
--- ABOUT : Superpower for java
--- LINKS :
---   > github: https://github.com/mfussenegger/nvim-jdtls
+-- TITLE : globals
+-- ABOUT : Setting up our global and local leader
 -- ================================================================================================
 
-return {
-  'mfussenegger/nvim-jdtls',
-  ft = 'java',
-}
+vim.g.mapleader = ' '
+vim.g.maplocalleader = ' '

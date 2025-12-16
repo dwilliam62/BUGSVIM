@@ -1,51 +1,41 @@
--- Set discipline
-local discipline = require 'utils.discipline'
-discipline.cowboy()
+-- ================================================================================================
+-- TITLE: NeoVim keymaps
+-- ABOUT: sets some quality-of-life keymaps
+-- ================================================================================================
 
--- Set our leader keybinding to space
--- Anywhere you see <leader> in a keymapping specifies the space key
-vim.g.mapleader = ' '
-vim.g.maplocalleader = ' '
+-- Center screen when jumping
+vim.keymap.set('n', 'n', 'nzzzv', { desc = 'Next search result (centered)' })
+vim.keymap.set('n', 'N', 'Nzzzv', { desc = 'Previous search result (centered)' })
+vim.keymap.set('n', '<C-d>', '<C-d>zz', { desc = 'Half page down (centered)' })
+vim.keymap.set('n', '<C-u>', '<C-u>zz', { desc = 'Half page up (centered)' })
 
--- Remove search highlights after searching
-vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>', { desc = 'Remove search highlights' })
-
--- Exit Vim's terminal mode
-vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
-
--- OPTIONAL: Disable arrow keys in normal mode
-vim.keymap.set('n', '<left>', '<cmd>echo "Use h to move!!"<CR>')
-vim.keymap.set('n', '<right>', '<cmd>echo "Use l to move!!"<CR>')
-vim.keymap.set('n', '<up>', '<cmd>echo "Use k to move!!"<CR>')
-vim.keymap.set('n', '<down>', '<cmd>echo "Use j to move!!"<CR>')
+-- Buffer navigation
+vim.keymap.set('n', '<leader>bn', '<Cmd>bnext<CR>', { desc = 'Next buffer' })
+vim.keymap.set('n', '<leader>bp', '<Cmd>bprevious<CR>', { desc = 'Previous buffer' })
 
 -- Better window navigation
-vim.keymap.set('n', '<C-h>', '<C-w><C-h>', { desc = 'Move focus to the left window' })
-vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right window' })
-vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
-vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
+vim.keymap.set('n', '<C-h>', '<C-w>h', { desc = 'Move to left window' })
+vim.keymap.set('n', '<C-j>', '<C-w>j', { desc = 'Move to bottom window' })
+vim.keymap.set('n', '<C-k>', '<C-w>k', { desc = 'Move to top window' })
+vim.keymap.set('n', '<C-l>', '<C-w>l', { desc = 'Move to right window' })
 
--- Easily split windows
-vim.keymap.set('n', '<leader>wv', ':vsplit<cr>', { desc = '[W]indow Split [V]ertical' })
-vim.keymap.set('n', '<leader>wh', ':split<cr>', { desc = '[W]indow Split [H]orizontal' })
+-- Splitting & Resizing
+vim.keymap.set('n', '<leader>sv', '<Cmd>vsplit<CR>', { desc = 'Split window vertically' })
+vim.keymap.set('n', '<leader>sh', '<Cmd>split<CR>', { desc = 'Split window horizontally' })
+vim.keymap.set('n', '<C-Up>', '<Cmd>resize +2<CR>', { desc = 'Increase window height' })
+vim.keymap.set('n', '<C-Down>', '<Cmd>resize -2<CR>', { desc = 'Decrease window height' })
+vim.keymap.set('n', '<C-Left>', '<Cmd>vertical resize -2<CR>', { desc = 'Decrease window width' })
+vim.keymap.set('n', '<C-Right>', '<Cmd>vertical resize +2<CR>', { desc = 'Increase window width' })
 
--- Stay in indent mode
-vim.keymap.set('v', '<', '<gv', { desc = 'Indent left in visual mode' })
-vim.keymap.set('v', '>', '>gv', { desc = 'Indent right in visual mode' })
+-- Better indenting in visual mode
+vim.keymap.set('v', '<', '<gv', { desc = 'Indent left and reselect' })
+vim.keymap.set('v', '>', '>gv', { desc = 'Indent right and reselect' })
 
--- Find and center
-vim.keymap.set('n', 'n', 'nzzzv')
-vim.keymap.set('n', 'N', 'Nzzzv')
+-- Better J behavior
+vim.keymap.set('n', 'J', 'mzJ`z', { desc = 'Join lines and keep cursor position' })
 
 -- Keep last yanked when pasting
 vim.keymap.set('v', 'p', '"_dP', { noremap = true, silent = true })
 
--- Live preview
-vim.keymap.set('n', '<leader>lp', '<cmd>LivePreview start<CR>', { desc = '[L]ive [P]riview Start' })
-
--- Duplicate the above line without changing cursor position
-vim.keymap.set({ 'n', 'i' }, '<C-`>', '<cmd>copy .<CR>', { silent = true, desc = 'Duplicate line without moving cursor' })
-
--- Floating terminal
--- stylua: ignore
-vim.keymap.set('n', '<leader>tt', function() require('utils.floatterm').float_term() end, { desc = '[T]oggle [T]erminal' })
+-- Quick config editing
+vim.keymap.set('n', '<leader>rc', '<Cmd>e ~/.config/nvim/init.lua<CR>', { desc = 'Edit config' })
