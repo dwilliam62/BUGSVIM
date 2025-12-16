@@ -14,6 +14,7 @@ return {
       c = { 'cpplint' },
       cpp = { 'cpplint' },
       rust = { 'clippy' },
+      python = { 'ruff' },
     }
 
     -- Lint on save

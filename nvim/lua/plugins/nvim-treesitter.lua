@@ -42,6 +42,7 @@ return {
           'markdown',
           'markdown_inline',
           'bash',
+          'fish',
           'tsx',
           'css',
           'html',
