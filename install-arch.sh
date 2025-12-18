@@ -130,13 +130,15 @@ export PATH=~/.npm-global/bin:$PATH
 echo -e "${BLUE}Step 6: Installing npm global packages...${NC}"
 npm install -g @fsouza/prettierd vscode-langservers-extracted
 
+echo -e "${BLUE}Step 6b: Installing Python packages...${NC}"
+pip3 install --user pyright ruff
+
 echo -e "${BLUE}Step 7: Checking for AUR helper...${NC}"
 if command -v yay &> /dev/null; then
     echo -e "${GREEN}✓ yay found${NC}"
     echo -e "${BLUE}Step 8: Installing AUR packages (recommended)...${NC}"
     yay -S --noconfirm \
         hyprls \
-        pyright \
         alejandra-bin \
         prettierd || true
 elif command -v paru &> /dev/null; then
@@ -144,7 +146,6 @@ elif command -v paru &> /dev/null; then
     echo -e "${BLUE}Step 8: Installing AUR packages (recommended)...${NC}"
     paru -S --noconfirm \
         hyprls \
-        pyright \
         alejandra-bin \
         prettierd || true
 else
