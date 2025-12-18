@@ -39,6 +39,7 @@ This configuration is forked from **[BUGSVIM](https://github.com/Abhra00/BUGSVIM
   - HTML, CSS, Tailwind CSS
   - Hyprland (hyprls)
   - Java (JDTLS)
+- **Enhanced diagnostics** with inline error messages, gutter signs, and floating windows
 - **Advanced code completion** via Blink Cmp with intelligent caching
 - **Multi-formatter support** via Conform (stylua, shfmt, clang-format, prettier)
 - **Real-time linting** with nvim-lint
@@ -53,11 +54,14 @@ This configuration is forked from **[BUGSVIM](https://github.com/Abhra00/BUGSVIM
 - **Smart snippets** for rapid coding
 - **Lazy loading** for sub-millisecond startup times
 - **Which-key** integration for discoverable keybindings
+- **Beautiful UI with Noice.nvim** - command palette and event notifications in popup windows
 
 ### 🛠️ Developer Tools
 
 - **Spring Boot** development support
 - **Java Development** via JDTLS
+- **Markdown support** with live preview in browser (markdown-preview.nvim)
+- **Enhanced markdown editing** with checkbox and table support (markdown.nvim)
 - **Snacks.nvim** for notifications, animations, and quality-of-life features
 - **Mini.nvim** utilities for enhanced editing
 - **LazyDev** for integrated Neovim API documentation
