@@ -199,7 +199,19 @@ For common issues and solutions, see [POST-INSTALL.md](./POST-INSTALL.md).
 
 ## License
 
-Free to use and modify. Respects the licenses of all included plugins.
+This project is licensed under the **GNU General Public License v3 (GPL-3.0)**.
+
+You are free to:
+- Use this software for any purpose
+- Distribute copies
+- Modify the source code
+
+Under the condition that:
+- You provide source code availability (include it or link to it)
+- Any modified versions must also use GPL-3.0
+- You include the license and copyright notices
+
+See the [LICENSE](./LICENSE) file for the full text.
 
 ## Support
 
