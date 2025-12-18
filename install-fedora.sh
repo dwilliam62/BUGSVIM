@@ -14,9 +14,50 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# ================================================================================================
+# Backup existing NeoVim configuration
+# ================================================================================================
+backup_neovim_config() {
+    local timestamp=$(date +"%Y%m%d-%H%M%S")
+    local backup_dir="${HOME}/neovim-backup-${timestamp}"
+    local has_config=false
+    
+    echo -e "${BLUE}Checking for existing NeoVim configuration...${NC}"
+    
+    # Check each config location
+    if [ -d "${HOME}/.config/nvim" ] || [ -d "${HOME}/.local/share/nvim" ] || [ -d "${HOME}/.local/state/nvim" ]; then
+        has_config=true
+    fi
+    
+    if [ "$has_config" = true ]; then
+        echo -e "${YELLOW}Found existing NeoVim configuration${NC}"
+        read -p "Backup existing config? (y/n) " -n 1 -r
+        echo
+        
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            mkdir -p "$backup_dir"
+            echo -e "${BLUE}Creating backup in: $backup_dir${NC}"
+            
+            [ -d "${HOME}/.config/nvim" ] && cp -r "${HOME}/.config/nvim" "$backup_dir/.config-nvim"
+            [ -d "${HOME}/.local/share/nvim" ] && cp -r "${HOME}/.local/share/nvim" "$backup_dir/.local-share-nvim"
+            [ -d "${HOME}/.local/state/nvim" ] && cp -r "${HOME}/.local/state/nvim" "$backup_dir/.local-state-nvim"
+            
+            echo -e "${GREEN}✓ Backup created: $backup_dir${NC}"
+        else
+            echo -e "${YELLOW}Skipping backup${NC}"
+        fi
+    else
+        echo -e "${GREEN}✓ No existing NeoVim configuration found${NC}"
+    fi
+}
+
 echo -e "${BLUE}╔════════════════════════════════════════════════════════════════╗${NC}"
 echo -e "${BLUE}║   bugsvim - Fedora Installation${NC}"
 echo -e "${BLUE}╚════════════════════════════════════════════════════════════════╝${NC}"
+echo ""
+
+# Backup existing config
+backup_neovim_config
 echo ""
 
 # Check if running on Fedora

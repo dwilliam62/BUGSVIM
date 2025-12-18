@@ -25,16 +25,20 @@ bash install-fedora.sh
 
 Each script performs the following steps in order:
 
-1. **Verify Distribution** - Checks you're running the correct OS (with override option)
-2. **Update Package Manager** - Updates package lists
-3. **Install Core Dependencies** - neovim, git, ripgrep, fd, build tools, pkg-config
-4. **Install Language Servers** - lua-language-server, python, nodejs, npm, clang, bash-language-server, rustup, nil
-5. **Install Formatters** - stylua, shfmt, clang-format, prettier
-6. **Install Convenience Tools** - lazygit, bat, wl-clipboard (optional)
-7. **Install Global Packages** - npm packages (@fsouza/prettierd, vscode-langservers-extracted)
-8. **Install Python Packages** - pip packages (ruff, pyright)
-9. **Optional: Build hyprls** - Prompts to build Hyprland LSP from source (Debian/Fedora only)
-10. **Verify Installation** - Checks all components are installed and accessible
+1. **Backup Existing Config** - Backs up existing NeoVim configuration if found
+   - Checks: `~/.config/nvim`, `~/.local/share/nvim`, `~/.local/state/nvim`
+   - Creates timestamped backup: `~/neovim-backup-YYYYMMDD-HHMMSS/`
+   - Prompts user before backing up (optional)
+2. **Verify Distribution** - Checks you're running the correct OS (with override option)
+3. **Update Package Manager** - Updates package lists
+4. **Install Core Dependencies** - neovim, git, ripgrep, fd, build tools, pkg-config
+5. **Install Language Servers** - lua-language-server, python, nodejs, npm, clang, bash-language-server, rustup, nil
+6. **Install Formatters** - stylua, shfmt, clang-format, prettier
+7. **Install Convenience Tools** - lazygit, bat, wl-clipboard (optional)
+8. **Install Global Packages** - npm packages (@fsouza/prettierd, vscode-langservers-extracted)
+9. **Install Python Packages** - pip packages (ruff, pyright)
+10. **Optional: Build hyprls** - Prompts to build Hyprland LSP from source (Debian/Fedora only)
+11. **Verify Installation** - Checks all components are installed and accessible
 
 ## Distro-Specific Notes
 
@@ -98,6 +102,47 @@ Each script performs the following steps in order:
 **Installation Time:** ~8-15 minutes (depending on hyprls build)
 
 ---
+
+## Backup Feature
+
+Each script automatically checks for existing NeoVim configurations and offers to back them up before installation.
+
+### What Gets Backed Up
+
+If any of these directories exist, they will be backed up:
+- `~/.config/nvim` - Configuration files
+- `~/.local/share/nvim` - Plugin data and runtime files
+- `~/.local/state/nvim` - Session state and history
+
+### Backup Location
+
+Backups are stored in:
+```
+~/neovim-backup-YYYYMMDD-HHMMSS/
+```
+
+Example: `~/neovim-backup-20251218-005700/`
+
+Within the backup directory, each location is preserved:
+```
+neovim-backup-20251218-005700/
+├── .config-nvim/          # From ~/.config/nvim
+├── .local-share-nvim/     # From ~/.local/share/nvim
+└── .local-state-nvim/     # From ~/.local/state/nvim
+```
+
+### Restoring a Backup
+
+If needed, you can restore your backup:
+```bash
+# List backups
+ls ~/ | grep neovim-backup
+
+# Restore a specific backup
+cp -r ~/neovim-backup-20251218-005700/.config-nvim ~/.config/nvim
+cp -r ~/neovim-backup-20251218-005700/.local-share-nvim ~/.local/share/nvim
+cp -r ~/neovim-backup-20251218-005700/.local-state-nvim ~/.local/state/nvim
+```
 
 ## Usage Examples
 
