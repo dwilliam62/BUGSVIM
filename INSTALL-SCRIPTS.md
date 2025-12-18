@@ -65,7 +65,8 @@ Each script performs the following steps in order:
 **Features:**
 - Interactive option to build hyprls from source
 - Graceful fallback if hyprls build fails
-- Installs latest packages from debian repos
+- Installs packages from debian repos + npm/pip for unavailable packages
+- Smart detection for packages not in standard repos
 
 **Prerequisites:**
 - `sudo` access
@@ -76,6 +77,9 @@ Each script performs the following steps in order:
 - Uses python3-venv for Python environments
 - fd-find package (not just fd)
 - rustup for latest Rust
+- lua-language-server: installed via npm
+- bash-language-server: installed via npm
+- nil (Nix LSP): attempts standard install, gracefully skips if unavailable
 
 **Installation Time:** ~8-15 minutes (depending on hyprls build)
 
@@ -201,6 +205,23 @@ Check the verification output at the end. You may need to:
    make hyprls
    sudo cp hyprls /usr/local/bin/
    ```
+
+### Package not found errors on Debian/Ubuntu
+
+Some packages are not in standard Debian repos. The script handles this automatically:
+
+**lua-language-server:**
+- Installed via npm automatically
+- Manual: `npm install -g lua-language-server`
+
+**bash-language-server:**
+- Installed via npm automatically
+- Manual: `npm install -g bash-language-server`
+
+**nil (Nix LSP):**
+- Script attempts standard install but gracefully skips if unavailable
+- Manual install (requires Nix): `nix run github:oxalica/nil`
+- Source build: See https://github.com/oxalica/nil
 
 ### npm: command not found
 Node.js/npm not installed. Install manually:

@@ -85,16 +85,29 @@ sudo apt-get install -y \
 echo -e "${BLUE}Step 3: Installing language servers...${NC}"
 sudo apt-get install -y \
     lua5.1 \
-    lua-language-server \
     python3-venv \
     python3-pip \
     nodejs \
     npm \
     clang \
     clang-tools \
-    bash-language-server \
-    rustup \
-    nil
+    rustup
+
+echo -e "${BLUE}Step 3b: Installing language servers from npm/pip...${NC}"
+# These packages are not in standard Debian repos, install via npm/pip
+echo -e "${BLUE}  Installing lua-language-server...${NC}"
+npm install -g lua-language-server || echo -e "${YELLOW}Warning: lua-language-server install failed${NC}"
+
+echo -e "${BLUE}  Installing bash-language-server...${NC}"
+npm install -g bash-language-server || echo -e "${YELLOW}Warning: bash-language-server install failed${NC}"
+
+echo -e "${BLUE}  Installing nil (Nix LSP)...${NC}"
+if apt-cache search nil | grep -q "^nil "; then
+    sudo apt-get install -y nil
+else
+    echo -e "${YELLOW}nil not in standard Debian repos - skipping${NC}"
+    echo -e "${YELLOW}To install nil manually, visit: https://github.com/oxalica/nil${NC}"
+fi
 
 echo -e "${BLUE}Step 4: Installing formatters...${NC}"
 sudo apt-get install -y \
