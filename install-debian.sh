@@ -153,7 +153,9 @@ echo -e "${BLUE}  Installing vscode-langservers...${NC}"
 npm install -g vscode-langservers-extracted || echo -e "${YELLOW}Warning: vscode-langservers-extracted install failed${NC}"
 
 echo -e "${BLUE}Step 7: Installing Python packages...${NC}"
-pip3 install --user ruff pyright
+# Ubuntu 25.10+ enforces PEP 668, use --break-system-packages for user installs
+pip3 install --user --break-system-packages ruff pyright 2>/dev/null || \
+pip3 install --user ruff pyright || echo -e "${YELLOW}Warning: Python packages install failed${NC}"
 
 echo -e "${BLUE}Step 8: Optional - Build hyprls from source${NC}"
 if [ -d /tmp/hyprland ]; then
