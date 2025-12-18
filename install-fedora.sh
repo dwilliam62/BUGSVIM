@@ -48,9 +48,11 @@ backup_neovim_config() {
         fi
         
         # Remove existing config regardless of backup choice
-        echo -e "${BLUE}Removing existing NeoVim config...${NC}"
+        echo -e "${BLUE}Removing existing NeoVim config and state...${NC}"
         rm -rf "${HOME}/.config/nvim"
-        echo -e "${GREEN}✓ Existing config removed${NC}"
+        rm -rf "${HOME}/.local/share/nvim"
+        rm -rf "${HOME}/.local/state/nvim"
+        echo -e "${GREEN}✓ Existing config and state removed${NC}"
     else
         echo -e "${GREEN}✓ No existing NeoVim configuration found${NC}"
     fi
@@ -154,11 +156,9 @@ read -p "Build hyprls from source? (y/n) " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo -e "${BLUE}Cloning hyprland repository...${NC}"
-    cd /tmp
-    git clone --depth 1 https://github.com/hyprwm/hyprland.git
-    cd hyprland
+    (cd /tmp && git clone --depth 1 https://github.com/hyprwm/hyprland.git)
     echo -e "${BLUE}Building hyprls...${NC}"
-    if make hyprls 2>/dev/null; then
+    if (cd /tmp/hyprland && make hyprls 2>/dev/null); then
         echo -e "${BLUE}Installing hyprls...${NC}"
         sudo cp /tmp/hyprland/hyprls /usr/local/bin/
         echo -e "${GREEN}✓ hyprls installed${NC}"
@@ -233,11 +233,15 @@ else
 fi
 
 echo ""
+
+# Get the script directory before we do any cd operations
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 echo -e "${BLUE}Step 11: Setting up bugsvim configuration...${NC}"
 
 # Copy nvim directory to ~/.config/nvim
 echo -e "${BLUE}Copying nvim config to ~/.config/nvim...${NC}"
-cp -r "$(pwd)/nvim" "${HOME}/.config/nvim"
+cp -r "${SCRIPT_DIR}/nvim" "${HOME}/.config/nvim"
 echo -e "${GREEN}✓ bugsvim config copied to ~/.config/nvim${NC}"
 
 # Add npm PATH to shell config if not already present

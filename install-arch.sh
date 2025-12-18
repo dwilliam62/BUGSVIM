@@ -46,6 +46,13 @@ backup_neovim_config() {
         else
             echo -e "${YELLOW}Skipping backup${NC}"
         fi
+        
+        # Remove existing config regardless of backup choice
+        echo -e "${BLUE}Removing existing NeoVim config and state...${NC}"
+        rm -rf "${HOME}/.config/nvim"
+        rm -rf "${HOME}/.local/share/nvim"
+        rm -rf "${HOME}/.local/state/nvim"
+        echo -e "${GREEN}✓ Existing config and state removed${NC}"
     else
         echo -e "${GREEN}✓ No existing NeoVim configuration found${NC}"
     fi
@@ -164,6 +171,10 @@ else
 fi
 
 echo ""
+
+# Get the script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 echo -e "${BLUE}Step 9: Verifying installation...${NC}"
 echo ""
 
@@ -212,7 +223,7 @@ if [ $MISSING -eq 0 ]; then
     
     # Copy nvim directory to ~/.config/nvim
     echo -e "${BLUE}Copying nvim config to ~/.config/nvim...${NC}"
-    cp -r "$(pwd)/nvim" "${HOME}/.config/nvim"
+    cp -r "${SCRIPT_DIR}/nvim" "${HOME}/.config/nvim"
     echo -e "${GREEN}✓ bugsvim config copied to ~/.config/nvim${NC}"
     
     # Add npm PATH to shell config if not already present
