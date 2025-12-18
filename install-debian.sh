@@ -152,22 +152,25 @@ pip3 install --user --break-system-packages ruff pyright 2>/dev/null || \
 pip3 install --user ruff pyright || echo -e "${YELLOW}Warning: Python packages install failed${NC}"
 
 echo -e "${BLUE}Step 8: Optional - Build hyprls from source${NC}"
-if [ -d /tmp/hyprland ]; then
-    rm -rf /tmp/hyprland
-fi
 read -p "Build hyprls from source? (y/n) " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo -e "${BLUE}Installing hyprls build dependencies...${NC}"
+    sudo apt-get install -y cmake meson wayland-protocols libwayland-dev libxcb-render0-dev libxcb-shape0-dev || true
+    
+    if [ -d /tmp/hyprland ]; then
+        rm -rf /tmp/hyprland
+    fi
     echo -e "${BLUE}Cloning hyprland repository...${NC}"
     (cd /tmp && git clone --depth 1 https://github.com/hyprwm/hyprland.git)
     echo -e "${BLUE}Building hyprls...${NC}"
-    if (cd /tmp/hyprland && make hyprls 2>/dev/null); then
+    if (cd /tmp/hyprland && cmake -B build && cmake --build build --target hyprls 2>/dev/null); then
         echo -e "${BLUE}Installing hyprls...${NC}"
-        sudo cp /tmp/hyprland/hyprls /usr/local/bin/
+        sudo cp /tmp/hyprland/build/hyprls /usr/local/bin/ 2>/dev/null || sudo install -m 755 /tmp/hyprland/build/hyprls /usr/local/bin/
         echo -e "${GREEN}✓ hyprls installed${NC}"
     else
-        echo -e "${YELLOW}⚠ hyprls build skipped (requires additional dependencies)${NC}"
-        echo "  You can manually build later: cd /tmp/hyprland && make hyprls"
+        echo -e "${YELLOW}⚠ hyprls build failed (check dependencies)${NC}"
+        echo "  Install build dependencies: cmake, meson, wayland-protocols, libwayland-dev"
     fi
 else
     echo -e "${YELLOW}Skipping hyprls build${NC}"
