@@ -227,14 +227,42 @@ fi
 
 echo ""
 if [ $MISSING -eq 0 ]; then
+    echo -e "${BLUE}Step 10: Setting up bugsvim configuration...${NC}"
+    
+    # Copy nvim directory to ~/.config/nvim
+    echo -e "${BLUE}Copying nvim config to ~/.config/nvim...${NC}"
+    cp -r "$(pwd)/nvim" "${HOME}/.config/nvim"
+    echo -e "${GREEN}✓ bugsvim config copied to ~/.config/nvim${NC}"
+    
+    # Add npm PATH to shell config if not already present
+    echo -e "${BLUE}Step 11: Configuring shell PATH for npm...${NC}"
+    SHELL_CONFIG="${HOME}/.$(basename $SHELL)rc"
+    NPM_PATH_LINE="export PATH=\"$HOME/.npm-global/bin:\$PATH\""
+    
+    if [ -f "$SHELL_CONFIG" ]; then
+        if ! grep -q "npm-global" "$SHELL_CONFIG"; then
+            echo "$NPM_PATH_LINE" >> "$SHELL_CONFIG"
+            echo -e "${GREEN}✓ Added npm PATH to $SHELL_CONFIG${NC}"
+        else
+            echo -e "${GREEN}✓ npm PATH already in $SHELL_CONFIG${NC}"
+        fi
+    else
+        echo -e "${YELLOW}Creating $SHELL_CONFIG...${NC}"
+        echo "$NPM_PATH_LINE" > "$SHELL_CONFIG"
+    fi
+    
+    echo ""
     echo -e "${GREEN}╔════════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${GREEN}║   Installation completed successfully! ✓${NC}"
     echo -e "${GREEN}╚════════════════════════════════════════════════════════════════╝${NC}"
     echo ""
     echo "Next steps:"
-    echo "  1. Clone bugsvim: git clone https://github.com/ddubs/bugsvim ~/.config/nvim"
+    echo "  1. Reload your shell: source $SHELL_CONFIG"
     echo "  2. Launch neovim: nvim"
-    echo "  3. Verify LSP: :LspInfo"
+    echo "  3. Plugins will auto-install on first launch"
+    echo "  4. Verify LSP: :LspInfo"
+    echo ""
+    echo "See POST-INSTALL.md for additional setup and troubleshooting."
 else
     echo -e "${YELLOW}Some components are missing. Check output above.${NC}"
     exit 1
