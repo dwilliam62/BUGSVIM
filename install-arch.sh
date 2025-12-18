@@ -73,7 +73,7 @@ echo -e "${BLUE}Step 1: Updating package manager...${NC}"
 sudo pacman -Sy --noconfirm
 
 echo -e "${BLUE}Step 2: Installing core dependencies...${NC}"
-sudo pacman -S --noconfirm \
+sudo pacman -S --needed --noconfirm \
     neovim \
     git \
     ripgrep \
@@ -83,18 +83,34 @@ sudo pacman -S --noconfirm \
     pkg-config
 
 echo -e "${BLUE}Step 3: Installing language servers...${NC}"
-sudo pacman -S --noconfirm \
+sudo pacman -S --needed --noconfirm \
     lua-language-server \
     python \
     nodejs \
     npm \
     clang \
-    bash-language-server \
-    rustup \
-    nil
+    bash-language-server
+
+echo -e "${BLUE}Step 3b: Installing Rust (checking for conflicts)...${NC}"
+if pacman -Q rustup &>/dev/null; then
+    echo -e "${GREEN}✓ rustup already installed${NC}"
+elif pacman -Q rust &>/dev/null; then
+    echo -e "${YELLOW}rust package found (from official repos)${NC}"
+    echo -e "${YELLOW}Not installing rustup to avoid conflicts${NC}"
+else
+    sudo pacman -S --needed --noconfirm rustup
+fi
+
+echo -e "${BLUE}Step 3c: Checking for nil (Nix LSP)...${NC}"
+if command -v nil &>/dev/null; then
+    echo -e "${GREEN}✓ nil already installed${NC}"
+else
+    echo -e "${YELLOW}nil not in official Arch repos${NC}"
+    echo -e "${YELLOW}Available via AUR: yay -S nil${NC}"
+fi
 
 echo -e "${BLUE}Step 4: Installing formatters...${NC}"
-sudo pacman -S --noconfirm \
+sudo pacman -S --needed --noconfirm \
     stylua \
     shfmt \
     clang \

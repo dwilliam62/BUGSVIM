@@ -82,7 +82,7 @@ sudo apt-get install -y \
     build-essential \
     pkg-config
 
-echo -e "${BLUE}Step 3: Installing language servers...${NC}"
+echo -e "${BLUE}Step 3: Installing language servers from apt...${NC}"
 sudo apt-get install -y \
     lua5.1 \
     python3-venv \
@@ -91,30 +91,46 @@ sudo apt-get install -y \
     npm \
     clang \
     clang-tools \
-    rustup
+    rustup || true
 
-echo -e "${BLUE}Step 3b: Installing language servers from npm/pip...${NC}"
-# These packages are not in standard Debian repos, install via npm/pip
+echo -e "${BLUE}Step 3b: Setting up npm for global installs...${NC}"
+# Configure npm to use user directory instead of global (avoids permission issues)
+mkdir -p ~/.npm-global
+npm config set prefix '~/.npm-global' --location=per-user 2>/dev/null || true
+export PATH=~/.npm-global/bin:$PATH
+
+echo -e "${BLUE}Step 3c: Installing language servers from npm...${NC}"
 echo -e "${BLUE}  Installing lua-language-server...${NC}"
-npm install -g lua-language-server || echo -e "${YELLOW}Warning: lua-language-server install failed${NC}"
+npm install -g @luals/lua-language-server || echo -e "${YELLOW}Warning: lua-language-server install failed${NC}"
 
 echo -e "${BLUE}  Installing bash-language-server...${NC}"
 npm install -g bash-language-server || echo -e "${YELLOW}Warning: bash-language-server install failed${NC}"
 
-echo -e "${BLUE}  Installing nil (Nix LSP)...${NC}"
-if apt-cache search nil | grep -q "^nil "; then
+echo -e "${BLUE}Step 3d: Checking for nil (Nix LSP)...${NC}"
+if command -v nil &> /dev/null; then
+    echo -e "${GREEN}✓ nil already installed${NC}"
+elif apt-cache search '^nil$' 2>/dev/null | grep -q nil; then
+    echo -e "${BLUE}Installing nil from apt...${NC}"
     sudo apt-get install -y nil
 else
-    echo -e "${YELLOW}nil not in standard Debian repos - skipping${NC}"
-    echo -e "${YELLOW}To install nil manually, visit: https://github.com/oxalica/nil${NC}"
+    echo -e "${YELLOW}nil not available in standard repos - skipping${NC}"
+    echo -e "${YELLOW}To install nil, visit: https://github.com/oxalica/nil${NC}"
 fi
 
 echo -e "${BLUE}Step 4: Installing formatters...${NC}"
-sudo apt-get install -y \
-    stylua \
-    shfmt \
-    clang-format \
-    prettier
+# Install formatters that are available
+echo -e "${BLUE}  Installing shfmt...${NC}"
+sudo apt-get install -y shfmt || echo -e "${YELLOW}Warning: shfmt not available${NC}"
+
+echo -e "${BLUE}  Installing clang-format...${NC}"
+sudo apt-get install -y clang-format || echo -e "${YELLOW}Warning: clang-format not available${NC}"
+
+# stylua and prettier install via npm
+echo -e "${BLUE}  Installing stylua (Lua formatter)...${NC}"
+npm install -g @johnnymorganz/stylua-bin || echo -e "${YELLOW}Warning: stylua install failed${NC}"
+
+echo -e "${BLUE}  Installing prettier (Web formatter)...${NC}"
+npm install -g prettier || echo -e "${YELLOW}Warning: prettier install failed${NC}"
 
 echo -e "${BLUE}Step 5: Installing optional convenience tools...${NC}"
 sudo apt-get install -y \
@@ -123,7 +139,11 @@ sudo apt-get install -y \
     wl-clipboard || true
 
 echo -e "${BLUE}Step 6: Installing npm global packages...${NC}"
-npm install -g @fsouza/prettierd vscode-langservers-extracted
+echo -e "${BLUE}  Installing prettierd...${NC}"
+npm install -g @fsouza/prettierd || echo -e "${YELLOW}Warning: prettierd install failed${NC}"
+
+echo -e "${BLUE}  Installing vscode-langservers...${NC}"
+npm install -g vscode-langservers-extracted || echo -e "${YELLOW}Warning: vscode-langservers-extracted install failed${NC}"
 
 echo -e "${BLUE}Step 7: Installing Python packages...${NC}"
 pip3 install --user ruff pyright

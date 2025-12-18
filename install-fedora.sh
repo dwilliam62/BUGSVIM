@@ -85,23 +85,50 @@ sudo dnf install -y \
 echo -e "${BLUE}Step 3: Installing language servers...${NC}"
 sudo dnf install -y \
     lua \
-    lua-language-server \
     python3-devel \
     python3-pip \
     nodejs \
     npm \
     clang \
     clang-tools-extra \
-    bash-language-server \
-    rust \
-    nil
+    rust
+
+echo -e "${BLUE}Step 3b: Checking for language servers...${NC}"
+
+echo -e "${BLUE}  Checking lua-language-server...${NC}"
+if dnf list lua-language-server &>/dev/null 2>&1; then
+    sudo dnf install -y lua-language-server
+else
+    echo -e "${YELLOW}lua-language-server not available in Fedora repos${NC}"
+fi
+
+echo -e "${BLUE}  Checking bash-language-server...${NC}"
+if dnf list bash-language-server &>/dev/null 2>&1; then
+    sudo dnf install -y bash-language-server
+else
+    echo -e "${YELLOW}bash-language-server not available - will install via npm${NC}"
+    npm install -g bash-language-server || echo -e "${YELLOW}Warning: bash-language-server install failed${NC}"
+fi
+
+echo -e "${BLUE}Step 3c: Checking for nil (Nix LSP)...${NC}"
+if command -v nil &>/dev/null; then
+    echo -e "${GREEN}✓ nil already installed${NC}"
+else
+    echo -e "${YELLOW}nil not available in Fedora repos${NC}"
+    echo -e "${YELLOW}To install nil, visit: https://github.com/oxalica/nil${NC}"
+fi
 
 echo -e "${BLUE}Step 4: Installing formatters...${NC}"
-sudo dnf install -y \
-    stylua \
-    shfmt \
-    clang-tools-extra \
-    prettier
+
+echo -e "${BLUE}  Installing shfmt...${NC}"
+sudo dnf install -y shfmt || echo -e "${YELLOW}Warning: shfmt not available${NC}"
+
+echo -e "${BLUE}  Installing clang-format (via clang-tools-extra)...${NC}"
+sudo dnf install -y clang-tools-extra || echo -e "${YELLOW}Warning: clang-tools-extra not available${NC}"
+
+echo -e "${BLUE}  Installing stylua and prettier via npm...${NC}"
+npm install -g @johnnymorganz/stylua-bin || echo -e "${YELLOW}Warning: stylua install failed${NC}"
+npm install -g prettier || echo -e "${YELLOW}Warning: prettier install failed${NC}"
 
 echo -e "${BLUE}Step 5: Installing optional convenience tools...${NC}"
 sudo dnf install -y \
@@ -115,12 +142,11 @@ npm install -g @fsouza/prettierd vscode-langservers-extracted
 echo -e "${BLUE}Step 7: Installing Python packages...${NC}"
 pip3 install --user ruff pyright
 
-echo -e "${BLUE}Step 8: Initializing Rust toolchain (if not already done)...${NC}"
-if ! command -v rustc &> /dev/null; then
-    echo -e "${BLUE}Initializing rustup...${NC}"
-    rustup default stable || true
+echo -e "${BLUE}Step 8: Verifying Rust installation...${NC}"
+if command -v rustc &> /dev/null; then
+    echo -e "${GREEN}✓ Rust already available${NC}"
 else
-    echo -e "${GREEN}✓ Rust already initialized${NC}"
+    echo -e "${YELLOW}Rust not found - it may need to be installed separately${NC}"
 fi
 
 echo -e "${BLUE}Step 9: Optional - Build hyprls from source${NC}"
