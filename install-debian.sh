@@ -113,16 +113,6 @@ echo -e "${YELLOW}Install from: https://github.com/LuaLS/lua-language-server/rel
 echo -e "${BLUE}  Installing bash-language-server...${NC}"
 npm install -g bash-language-server || echo -e "${YELLOW}Warning: bash-language-server install failed${NC}"
 
-echo -e "${BLUE}Step 3d: Checking for nil (Nix LSP)...${NC}"
-if command -v nil &> /dev/null; then
-    echo -e "${GREEN}✓ nil already installed${NC}"
-elif apt-cache search '^nil$' 2>/dev/null | grep -q nil; then
-    echo -e "${BLUE}Installing nil from apt...${NC}"
-    sudo apt-get install -y nil
-else
-    echo -e "${YELLOW}nil not available in standard repos - skipping${NC}"
-    echo -e "${YELLOW}To install nil, visit: https://github.com/oxalica/nil${NC}"
-fi
 
 echo -e "${BLUE}Step 4: Installing formatters...${NC}"
 # Install formatters that are available
@@ -193,7 +183,7 @@ echo ""
 MISSING=0
 
 echo "Checking LSP servers:"
-for cmd in lua-language-server clangd nil; do
+for cmd in clangd; do
     if command -v "$cmd" &> /dev/null; then
         echo -e "  ${GREEN}✓${NC} $cmd"
     else
@@ -239,44 +229,46 @@ else
 fi
 
 echo ""
-if [ $MISSING -eq 0 ]; then
-    echo -e "${BLUE}Step 10: Setting up bugsvim configuration...${NC}"
-    
-    # Copy nvim directory to ~/.config/nvim
-    echo -e "${BLUE}Copying nvim config to ~/.config/nvim...${NC}"
-    cp -r "${SCRIPT_DIR}/nvim" "${HOME}/.config/nvim"
-    echo -e "${GREEN}✓ bugsvim config copied to ~/.config/nvim${NC}"
-    
-    # Add npm PATH to shell config if not already present
-    echo -e "${BLUE}Step 11: Configuring shell PATH for npm...${NC}"
-    SHELL_CONFIG="${HOME}/.$(basename $SHELL)rc"
-    NPM_PATH_LINE="export PATH=\"$HOME/.npm-global/bin:\$PATH\""
-    
-    if [ -f "$SHELL_CONFIG" ]; then
-        if ! grep -q "npm-global" "$SHELL_CONFIG"; then
-            echo "$NPM_PATH_LINE" >> "$SHELL_CONFIG"
-            echo -e "${GREEN}✓ Added npm PATH to $SHELL_CONFIG${NC}"
-        else
-            echo -e "${GREEN}✓ npm PATH already in $SHELL_CONFIG${NC}"
-        fi
+echo -e "${BLUE}Step 10: Setting up bugsvim configuration...${NC}"
+
+# Copy nvim directory to ~/.config/nvim
+echo -e "${BLUE}Copying nvim config to ~/.config/nvim...${NC}"
+cp -r "${SCRIPT_DIR}/nvim" "${HOME}/.config/nvim"
+echo -e "${GREEN}✓ bugsvim config copied to ~/.config/nvim${NC}"
+
+# Add npm PATH to shell config if not already present
+echo -e "${BLUE}Step 11: Configuring shell PATH for npm...${NC}"
+SHELL_CONFIG="${HOME}/.$(basename $SHELL)rc"
+NPM_PATH_LINE="export PATH=\"$HOME/.npm-global/bin:\$PATH\""
+
+if [ -f "$SHELL_CONFIG" ]; then
+    if ! grep -q "npm-global" "$SHELL_CONFIG"; then
+        echo "$NPM_PATH_LINE" >> "$SHELL_CONFIG"
+        echo -e "${GREEN}✓ Added npm PATH to $SHELL_CONFIG${NC}"
     else
-        echo -e "${YELLOW}Creating $SHELL_CONFIG...${NC}"
-        echo "$NPM_PATH_LINE" > "$SHELL_CONFIG"
+        echo -e "${GREEN}✓ npm PATH already in $SHELL_CONFIG${NC}"
     fi
-    
-    echo ""
+else
+    echo -e "${YELLOW}Creating $SHELL_CONFIG...${NC}"
+    echo "$NPM_PATH_LINE" > "$SHELL_CONFIG"
+fi
+
+echo ""
+if [ $MISSING -eq 0 ]; then
     echo -e "${GREEN}╔════════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${GREEN}║   Installation completed successfully! ✓${NC}"
     echo -e "${GREEN}╚════════════════════════════════════════════════════════════════╝${NC}"
-    echo ""
-    echo "Next steps:"
-    echo "  1. Reload your shell: source $SHELL_CONFIG"
-    echo "  2. Launch neovim: nvim"
-    echo "  3. Plugins will auto-install on first launch"
-    echo "  4. Verify LSP: :LspInfo"
-    echo ""
-    echo "See POST-INSTALL.md for additional setup and troubleshooting."
 else
-    echo -e "${YELLOW}Some components are missing. Check output above.${NC}"
-    exit 1
+    echo -e "${YELLOW}⚠ Note: Some components are missing (see above)${NC}"
+    echo -e "${YELLOW}However, bugsvim config has been installed to ~/.config/nvim${NC}"
+    echo -e "${YELLOW}You can install missing components manually if needed${NC}"
 fi
+
+echo ""
+echo "Next steps:"
+echo "  1. Reload your shell: source $SHELL_CONFIG"
+echo "  2. Launch neovim: nvim"
+echo "  3. Plugins will auto-install on first launch"
+echo "  4. Verify LSP: :LspInfo"
+echo ""
+echo "See POST-INSTALL.md for additional setup and troubleshooting."
