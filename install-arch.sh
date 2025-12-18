@@ -19,7 +19,7 @@ NC='\033[0m' # No Color
 # ================================================================================================
 backup_neovim_config() {
     local timestamp=$(date +"%Y%m%d-%H%M%S")
-    local backup_dir="${HOME}/neovim-backup-${timestamp}"
+    local backup_dir="${HOME}/.config/neovim-backup-${timestamp}"
     local has_config=false
     
     echo -e "${BLUE}Checking for existing NeoVim configuration...${NC}"

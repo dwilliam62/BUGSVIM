@@ -19,7 +19,7 @@ NC='\033[0m' # No Color
 # ================================================================================================
 backup_neovim_config() {
     local timestamp=$(date +"%Y%m%d-%H%M%S")
-    local backup_dir="${HOME}/neovim-backup-${timestamp}"
+    local backup_dir="${HOME}/.config/neovim-backup-${timestamp}"
     local has_config=false
     
     echo -e "${BLUE}Checking for existing NeoVim configuration...${NC}"
@@ -98,32 +98,13 @@ mkdir -p ~/.npm-global
 npm config set prefix '~/.npm-global' --location=per-user 2>/dev/null || true
 export PATH=~/.npm-global/bin:$PATH
 
-echo -e "${BLUE}Step 3c: Checking for language servers...${NC}"
+echo -e "${BLUE}Step 3c: Installing language servers via npm...${NC}"
 
-echo -e "${BLUE}  Checking lua-language-server...${NC}"
-if dnf list lua-language-server &>/dev/null 2>&1; then
-    sudo dnf install -y lua-language-server
-else
-    echo -e "${YELLOW}lua-language-server not available in Fedora repos${NC}"
-    echo -e "${YELLOW}Installing lua-language-server via npm...${NC}"
-    npm install -g lua-language-server || echo -e "${YELLOW}Warning: lua-language-server install failed${NC}"
-fi
+echo -e "${BLUE}  Installing lua-language-server...${NC}"
+npm install -g @luals/lua-language-server || echo -e "${YELLOW}Warning: lua-language-server install failed${NC}"
 
-echo -e "${BLUE}  Checking bash-language-server...${NC}"
-if dnf list bash-language-server &>/dev/null 2>&1; then
-    sudo dnf install -y bash-language-server
-else
-    echo -e "${YELLOW}bash-language-server not available - will install via npm${NC}"
-    npm install -g bash-language-server || echo -e "${YELLOW}Warning: bash-language-server install failed${NC}"
-fi
-
-echo -e "${BLUE}Step 3d: Checking for nil (Nix LSP)...${NC}"
-if command -v nil &>/dev/null; then
-    echo -e "${GREEN}✓ nil already installed${NC}"
-else
-    echo -e "${YELLOW}nil not available in Fedora repos${NC}"
-    echo -e "${YELLOW}To install nil, visit: https://github.com/oxalica/nil${NC}"
-fi
+echo -e "${BLUE}  Installing bash-language-server...${NC}"
+npm install -g bash-language-server || echo -e "${YELLOW}Warning: bash-language-server install failed${NC}"
 
 echo -e "${BLUE}Step 4: Installing formatters...${NC}"
 
@@ -188,7 +169,7 @@ echo ""
 MISSING=0
 
 echo "Checking LSP servers:"
-for cmd in lua-language-server clangd nil; do
+for cmd in lua-language-server clangd; do
     if command -v "$cmd" &> /dev/null; then
         echo -e "  ${GREEN}✓${NC} $cmd"
     else
