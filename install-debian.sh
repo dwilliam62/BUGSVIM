@@ -76,6 +76,9 @@ if ! grep -qi "debian\|ubuntu" /etc/os-release 2>/dev/null; then
     [[ ! $REPLY =~ ^[Yy]$ ]] && exit 1
 fi
 
+# Get the script directory before any cd operations
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 echo -e "${BLUE}Step 1: Updating package manager...${NC}"
 sudo apt-get update
 
@@ -97,6 +100,7 @@ sudo apt-get install -y \
     nodejs \
     npm \
     clang \
+    clangd \
     clang-tools \
     rustup || true
 
@@ -155,11 +159,9 @@ read -p "Build hyprls from source? (y/n) " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo -e "${BLUE}Cloning hyprland repository...${NC}"
-    cd /tmp
-    git clone --depth 1 https://github.com/hyprwm/hyprland.git
-    cd hyprland
+    (cd /tmp && git clone --depth 1 https://github.com/hyprwm/hyprland.git)
     echo -e "${BLUE}Building hyprls...${NC}"
-    if make hyprls 2>/dev/null; then
+    if (cd /tmp/hyprland && make hyprls 2>/dev/null); then
         echo -e "${BLUE}Installing hyprls...${NC}"
         sudo cp /tmp/hyprland/hyprls /usr/local/bin/
         echo -e "${GREEN}✓ hyprls installed${NC}"
@@ -173,9 +175,6 @@ else
 fi
 
 echo ""
-
-# Get the script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo -e "${BLUE}Step 9: Verifying installation...${NC}"
 echo ""
