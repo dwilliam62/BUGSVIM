@@ -35,7 +35,6 @@ This configuration is forked from **[BUGSVIM](https://github.com/Abhra00/BUGSVIM
   - Rust (rust-analyzer)
   - Bash (bash-language-server)
   - HTML, CSS, Tailwind CSS
-  - Nix (nil)
   - Hyprland (hyprls)
   - Java (JDTLS)
 - **Advanced code completion** via Blink Cmp with intelligent caching
@@ -125,20 +124,19 @@ See [INSTALL.md](./INSTALL.md) for manual installation steps.
 
 ### Language Servers (LSP)
 
-| LSP                      | Language(s)           | Installation         |
-| ------------------------ | --------------------- | -------------------- |
-| **lua-language-server**  | Lua                   | System package       |
-| **clangd**               | C/C++                 | System package       |
-| **pyright**              | Python                | pip3 or AUR          |
-| **ts_ls**                | TypeScript/JavaScript | Npm                  |
-| **rust-analyzer**        | Rust                  | System package       |
-| **bash-language-server** | Bash/Shell            | Npm                  |
-| **nil**                  | Nix                   | System package / AUR |
-| **html**                 | HTML                  | Npm                  |
-| **cssls**                | CSS                   | Npm                  |
-| **tailwindcss**          | Tailwind CSS          | Npm                  |
-| **hyprls**               | Hyprland Config       | AUR / Manual build   |
-| **JDTLS**                | Java                  | Npm                  |
+| LSP                      | Language(s)           | Installation       |
+| ------------------------ | --------------------- | ------------------ |
+| **lua-language-server**  | Lua                   | System package     |
+| **clangd**               | C/C++                 | System package     |
+| **pyright**              | Python                | pip3 or AUR        |
+| **ts_ls**                | TypeScript/JavaScript | Npm                |
+| **rust-analyzer**        | Rust                  | System package     |
+| **bash-language-server** | Bash/Shell            | Npm                |
+| **html**                 | HTML                  | Npm                |
+| **cssls**                | CSS                   | Npm                |
+| **tailwindcss**          | Tailwind CSS          | Npm                |
+| **hyprls**               | Hyprland Config       | AUR / Manual build |
+| **JDTLS**                | Java                  | Npm                |
 
 ### Code Formatters
 
