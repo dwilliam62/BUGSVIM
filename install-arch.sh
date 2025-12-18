@@ -108,13 +108,6 @@ else
     sudo pacman -S --needed --noconfirm rustup
 fi
 
-echo -e "${BLUE}Step 3c: Checking for nil (Nix LSP)...${NC}"
-if command -v nil &>/dev/null; then
-    echo -e "${GREEN}✓ nil already installed${NC}"
-else
-    echo -e "${YELLOW}nil not in official Arch repos${NC}"
-    echo -e "${YELLOW}Available via AUR: yay -S nil${NC}"
-fi
 
 echo -e "${BLUE}Step 4: Installing formatters...${NC}"
 sudo pacman -S --needed --noconfirm \
@@ -183,7 +176,7 @@ echo ""
 MISSING=0
 
 echo "Checking LSP servers:"
-for cmd in lua-language-server clangd nil; do
+for cmd in lua-language-server clangd; do
     if command -v "$cmd" &> /dev/null; then
         echo -e "  ${GREEN}✓${NC} $cmd"
     else
