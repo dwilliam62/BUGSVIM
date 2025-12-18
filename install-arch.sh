@@ -130,6 +130,10 @@ export PATH=~/.npm-global/bin:$PATH
 echo -e "${BLUE}Step 6: Installing npm global packages...${NC}"
 npm install -g @fsouza/prettierd vscode-langservers-extracted
 
+echo -e "${YELLOW}Note: lua-language-server must be installed separately${NC}"
+echo -e "${YELLOW}Install from: https://github.com/LuaLS/lua-language-server/releases${NC}"
+echo -e "${YELLOW}Add to PATH: export PATH=\"${HOME}/.config/lsp/lua-language-server/bin:\$PATH\"${NC}"
+
 echo -e "${BLUE}Step 6b: Installing Python packages...${NC}"
 pip3 install --user pyright ruff
 

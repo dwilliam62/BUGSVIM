@@ -100,8 +100,8 @@ npm config set prefix '~/.npm-global' --location=per-user 2>/dev/null || true
 export PATH=~/.npm-global/bin:$PATH
 
 echo -e "${BLUE}Step 3c: Installing language servers from npm...${NC}"
-echo -e "${BLUE}  Installing lua-language-server...${NC}"
-npm install -g @luals/lua-language-server || echo -e "${YELLOW}Warning: lua-language-server install failed${NC}"
+echo -e "${YELLOW}Note: lua-language-server must be installed separately${NC}"
+echo -e "${YELLOW}Install from: https://github.com/LuaLS/lua-language-server/releases${NC}"
 
 echo -e "${BLUE}  Installing bash-language-server...${NC}"
 npm install -g bash-language-server || echo -e "${YELLOW}Warning: bash-language-server install failed${NC}"

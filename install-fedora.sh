@@ -98,10 +98,14 @@ mkdir -p ~/.npm-global
 npm config set prefix '~/.npm-global' --location=per-user 2>/dev/null || true
 export PATH=~/.npm-global/bin:$PATH
 
-echo -e "${BLUE}Step 3c: Installing language servers via npm...${NC}"
+echo -e "${BLUE}Step 3c: Setting up COPRs for additional packages...${NC}"
+sudo dnf copr enable -y relativesure/all-packages || echo -e "${YELLOW}Warning: COPR enable failed (may already be enabled)${NC}"
+sudo dnf copr enable -y atim/lazygit || echo -e "${YELLOW}Warning: lazygit COPR enable failed${NC}"
 
-echo -e "${BLUE}  Installing lua-language-server...${NC}"
-npm install -g @luals/lua-language-server || echo -e "${YELLOW}Warning: lua-language-server install failed${NC}"
+echo -e "${BLUE}Step 3d: Installing language servers...${NC}"
+
+echo -e "${BLUE}  Installing lua-language-server from COPR...${NC}"
+sudo dnf install -y lua-language-server || echo -e "${YELLOW}Warning: lua-language-server install failed${NC}"
 
 echo -e "${BLUE}  Installing bash-language-server...${NC}"
 npm install -g bash-language-server || echo -e "${YELLOW}Warning: bash-language-server install failed${NC}"
