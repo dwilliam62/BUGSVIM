@@ -2,6 +2,7 @@
 
 <img src="/assets/preview.png" width="100%" />
 <img src="/assets/preview2.png" width="100%" />
+<img src="/assets/preview3.png" width="100%" />
 
 ## About
 
@@ -202,11 +203,13 @@ For common issues and solutions, see [POST-INSTALL.md](./POST-INSTALL.md).
 This project is licensed under the **GNU General Public License v3 (GPL-3.0)**.
 
 You are free to:
+
 - Use this software for any purpose
 - Distribute copies
 - Modify the source code
 
 Under the condition that:
+
 - You provide source code availability (include it or link to it)
 - Any modified versions must also use GPL-3.0
 - You include the license and copyright notices
