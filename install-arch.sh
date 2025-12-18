@@ -142,7 +142,9 @@ echo -e "${YELLOW}Install from: https://github.com/LuaLS/lua-language-server/rel
 echo -e "${YELLOW}Add to PATH: export PATH=\"${HOME}/.config/lsp/lua-language-server/bin:\$PATH\"${NC}"
 
 echo -e "${BLUE}Step 6b: Installing Python packages...${NC}"
-pip3 install --user pyright ruff
+# Arch enforces PEP 668, use --break-system-packages for user installs
+pip3 install --user --break-system-packages pyright ruff 2>/dev/null || \
+pip3 install --user pyright ruff || echo -e "${YELLOW}Warning: Python packages install failed${NC}"
 
 echo -e "${BLUE}Step 7: Checking for AUR helper...${NC}"
 if command -v yay &> /dev/null; then
@@ -218,44 +220,46 @@ else
 fi
 
 echo ""
-if [ $MISSING -eq 0 ]; then
-    echo -e "${BLUE}Step 10: Setting up bugsvim configuration...${NC}"
-    
-    # Copy nvim directory to ~/.config/nvim
-    echo -e "${BLUE}Copying nvim config to ~/.config/nvim...${NC}"
-    cp -r "${SCRIPT_DIR}/nvim" "${HOME}/.config/nvim"
-    echo -e "${GREEN}✓ bugsvim config copied to ~/.config/nvim${NC}"
-    
-    # Add npm PATH to shell config if not already present
-    echo -e "${BLUE}Step 11: Configuring shell PATH for npm...${NC}"
-    SHELL_CONFIG="${HOME}/.$(basename $SHELL)rc"
-    NPM_PATH_LINE="export PATH=\"$HOME/.npm-global/bin:\$PATH\""
-    
-    if [ -f "$SHELL_CONFIG" ]; then
-        if ! grep -q "npm-global" "$SHELL_CONFIG"; then
-            echo "$NPM_PATH_LINE" >> "$SHELL_CONFIG"
-            echo -e "${GREEN}✓ Added npm PATH to $SHELL_CONFIG${NC}"
-        else
-            echo -e "${GREEN}✓ npm PATH already in $SHELL_CONFIG${NC}"
-        fi
+echo -e "${BLUE}Step 10: Setting up bugsvim configuration...${NC}"
+
+# Copy nvim directory to ~/.config/nvim
+echo -e "${BLUE}Copying nvim config to ~/.config/nvim...${NC}"
+cp -r "${SCRIPT_DIR}/nvim" "${HOME}/.config/nvim"
+echo -e "${GREEN}✓ bugsvim config copied to ~/.config/nvim${NC}"
+
+# Add npm PATH to shell config if not already present
+echo -e "${BLUE}Step 11: Configuring shell PATH for npm...${NC}"
+SHELL_CONFIG="${HOME}/.$(basename $SHELL)rc"
+NPM_PATH_LINE="export PATH=\"$HOME/.npm-global/bin:\$PATH\""
+
+if [ -f "$SHELL_CONFIG" ]; then
+    if ! grep -q "npm-global" "$SHELL_CONFIG"; then
+        echo "$NPM_PATH_LINE" >> "$SHELL_CONFIG"
+        echo -e "${GREEN}✓ Added npm PATH to $SHELL_CONFIG${NC}"
     else
-        echo -e "${YELLOW}Creating $SHELL_CONFIG...${NC}"
-        echo "$NPM_PATH_LINE" > "$SHELL_CONFIG"
+        echo -e "${GREEN}✓ npm PATH already in $SHELL_CONFIG${NC}"
     fi
-    
-    echo ""
+else
+    echo -e "${YELLOW}Creating $SHELL_CONFIG...${NC}"
+    echo "$NPM_PATH_LINE" > "$SHELL_CONFIG"
+fi
+
+echo ""
+if [ $MISSING -eq 0 ]; then
     echo -e "${GREEN}╔════════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${GREEN}║   Installation completed successfully! ✓${NC}"
     echo -e "${GREEN}╚════════════════════════════════════════════════════════════════╝${NC}"
-    echo ""
-    echo "Next steps:"
-    echo "  1. Reload your shell: source $SHELL_CONFIG"
-    echo "  2. Launch neovim: nvim"
-    echo "  3. Plugins will auto-install on first launch"
-    echo "  4. Verify LSP: :LspInfo"
-    echo ""
-    echo "See POST-INSTALL.md for additional setup and troubleshooting."
 else
-    echo -e "${YELLOW}Some components are missing. Check output above.${NC}"
-    exit 1
+    echo -e "${YELLOW}⚠ Note: Some components are missing (see above)${NC}"
+    echo -e "${YELLOW}However, bugsvim config has been installed to ~/.config/nvim${NC}"
+    echo -e "${YELLOW}You can install missing components manually if needed${NC}"
 fi
+
+echo ""
+echo "Next steps:"
+echo "  1. Reload your shell: source $SHELL_CONFIG"
+echo "  2. Launch neovim: nvim"
+echo "  3. Plugins will auto-install on first launch"
+echo "  4. Verify LSP: :LspInfo"
+echo ""
+echo "See POST-INSTALL.md for additional setup and troubleshooting."
