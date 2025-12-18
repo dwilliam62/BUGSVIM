@@ -39,3 +39,9 @@ vim.keymap.set('v', 'p', '"_dP', { noremap = true, silent = true })
 
 -- Quick config editing
 vim.keymap.set('n', '<leader>rc', '<Cmd>e ~/.config/nvim/init.lua<CR>', { desc = 'Edit config' })
+
+-- Markdown keymaps
+vim.keymap.set('n', '<leader>mc', '<Cmd>MarkdownCheckbox<CR>', { desc = 'Toggle markdown checkbox' })
+vim.keymap.set('n', '<leader>mp', '<Cmd>MarkdownPreview<CR>', { desc = 'Open markdown preview' })
+vim.keymap.set('n', '<leader>mt', '<Cmd>MarkdownPreviewToggle<CR>', { desc = 'Toggle markdown preview' })
+vim.keymap.set('n', '<leader>ms', '<Cmd>MarkdownPreviewStop<CR>', { desc = 'Stop markdown preview' })
