@@ -93,13 +93,20 @@ sudo dnf install -y \
     clang-tools-extra \
     rust
 
-echo -e "${BLUE}Step 3b: Checking for language servers...${NC}"
+echo -e "${BLUE}Step 3b: Configuring npm for user installs...${NC}"
+mkdir -p ~/.npm-global
+npm config set prefix '~/.npm-global' --location=per-user 2>/dev/null || true
+export PATH=~/.npm-global/bin:$PATH
+
+echo -e "${BLUE}Step 3c: Checking for language servers...${NC}"
 
 echo -e "${BLUE}  Checking lua-language-server...${NC}"
 if dnf list lua-language-server &>/dev/null 2>&1; then
     sudo dnf install -y lua-language-server
 else
     echo -e "${YELLOW}lua-language-server not available in Fedora repos${NC}"
+    echo -e "${YELLOW}Installing lua-language-server via npm...${NC}"
+    npm install -g lua-language-server || echo -e "${YELLOW}Warning: lua-language-server install failed${NC}"
 fi
 
 echo -e "${BLUE}  Checking bash-language-server...${NC}"
@@ -110,7 +117,7 @@ else
     npm install -g bash-language-server || echo -e "${YELLOW}Warning: bash-language-server install failed${NC}"
 fi
 
-echo -e "${BLUE}Step 3c: Checking for nil (Nix LSP)...${NC}"
+echo -e "${BLUE}Step 3d: Checking for nil (Nix LSP)...${NC}"
 if command -v nil &>/dev/null; then
     echo -e "${GREEN}✓ nil already installed${NC}"
 else
@@ -135,11 +142,6 @@ sudo dnf install -y \
     lazygit \
     bat \
     wl-clipboard || true
-
-echo -e "${BLUE}Step 5b: Configuring npm for user installs...${NC}"
-mkdir -p ~/.npm-global
-npm config set prefix '~/.npm-global' --location=per-user 2>/dev/null || true
-export PATH=~/.npm-global/bin:$PATH
 
 echo -e "${BLUE}Step 6: Installing npm global packages...${NC}"
 npm install -g @fsouza/prettierd vscode-langservers-extracted
