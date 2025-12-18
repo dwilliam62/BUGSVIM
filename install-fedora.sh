@@ -136,6 +136,11 @@ sudo dnf install -y \
     bat \
     wl-clipboard || true
 
+echo -e "${BLUE}Step 5b: Configuring npm for user installs...${NC}"
+mkdir -p ~/.npm-global
+npm config set prefix '~/.npm-global' --location=per-user 2>/dev/null || true
+export PATH=~/.npm-global/bin:$PATH
+
 echo -e "${BLUE}Step 6: Installing npm global packages...${NC}"
 npm install -g @fsouza/prettierd vscode-langservers-extracted
 
