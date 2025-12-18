@@ -46,6 +46,11 @@ backup_neovim_config() {
         else
             echo -e "${YELLOW}Skipping backup${NC}"
         fi
+        
+        # Remove existing config regardless of backup choice
+        echo -e "${BLUE}Removing existing NeoVim config...${NC}"
+        rm -rf "${HOME}/.config/nvim"
+        echo -e "${GREEN}✓ Existing config removed${NC}"
     else
         echo -e "${GREEN}✓ No existing NeoVim configuration found${NC}"
     fi
@@ -228,32 +233,32 @@ else
 fi
 
 echo ""
-if [ $MISSING -eq 0 ]; then
-    echo -e "${BLUE}Step 11: Setting up bugsvim configuration...${NC}"
-    
-    # Copy nvim directory to ~/.config/nvim
-    echo -e "${BLUE}Copying nvim config to ~/.config/nvim...${NC}"
-    cp -r "$(pwd)/nvim" "${HOME}/.config/nvim"
-    echo -e "${GREEN}✓ bugsvim config copied to ~/.config/nvim${NC}"
-    
-    # Add npm PATH to shell config if not already present
-    echo -e "${BLUE}Step 12: Configuring shell PATH for npm...${NC}"
-    SHELL_CONFIG="${HOME}/.$(basename $SHELL)rc"
-    NPM_PATH_LINE="export PATH=\"$HOME/.npm-global/bin:\$PATH\""
-    
-    if [ -f "$SHELL_CONFIG" ]; then
-        if ! grep -q "npm-global" "$SHELL_CONFIG"; then
-            echo "$NPM_PATH_LINE" >> "$SHELL_CONFIG"
-            echo -e "${GREEN}✓ Added npm PATH to $SHELL_CONFIG${NC}"
-        else
-            echo -e "${GREEN}✓ npm PATH already in $SHELL_CONFIG${NC}"
-        fi
+echo -e "${BLUE}Step 11: Setting up bugsvim configuration...${NC}"
+
+# Copy nvim directory to ~/.config/nvim
+echo -e "${BLUE}Copying nvim config to ~/.config/nvim...${NC}"
+cp -r "$(pwd)/nvim" "${HOME}/.config/nvim"
+echo -e "${GREEN}✓ bugsvim config copied to ~/.config/nvim${NC}"
+
+# Add npm PATH to shell config if not already present
+echo -e "${BLUE}Step 12: Configuring shell PATH for npm...${NC}"
+SHELL_CONFIG="${HOME}/.$(basename $SHELL)rc"
+NPM_PATH_LINE="export PATH=\"$HOME/.npm-global/bin:\$PATH\""
+
+if [ -f "$SHELL_CONFIG" ]; then
+    if ! grep -q "npm-global" "$SHELL_CONFIG"; then
+        echo "$NPM_PATH_LINE" >> "$SHELL_CONFIG"
+        echo -e "${GREEN}✓ Added npm PATH to $SHELL_CONFIG${NC}"
     else
-        echo -e "${YELLOW}Creating $SHELL_CONFIG...${NC}"
-        echo "$NPM_PATH_LINE" > "$SHELL_CONFIG"
+        echo -e "${GREEN}✓ npm PATH already in $SHELL_CONFIG${NC}"
     fi
-    
-    echo ""
+else
+    echo -e "${YELLOW}Creating $SHELL_CONFIG...${NC}"
+    echo "$NPM_PATH_LINE" > "$SHELL_CONFIG"
+fi
+
+echo ""
+if [ $MISSING -eq 0 ]; then
     echo -e "${GREEN}╔════════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${GREEN}║   Installation completed successfully! ✓${NC}"
     echo -e "${GREEN}╚════════════════════════════════════════════════════════════════╝${NC}"
@@ -267,5 +272,5 @@ if [ $MISSING -eq 0 ]; then
     echo "See POST-INSTALL.md for additional setup and troubleshooting."
 else
     echo -e "${YELLOW}Some components are missing. Check output above.${NC}"
-    exit 1
+    echo -e "${YELLOW}However, bugsvim config has been installed to ~/.config/nvim${NC}"
 fi
