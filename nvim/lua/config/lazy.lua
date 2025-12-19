@@ -25,6 +25,9 @@ require 'config.globals'
 require 'config.keymaps'
 require 'config.autocmds'
 
+-- Setup diagnostics
+require('utils.diagnostics').setup()
+
 -- Setup lazy.nvim
 require('lazy').setup {
   spec = {

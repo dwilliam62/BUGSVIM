@@ -12,6 +12,10 @@ require 'servers.tailwindcss'(capabilities)
 require 'servers.clangd'(capabilities)
 require 'servers.bashls'(capabilities)
 require 'servers.rust_analyzer'(capabilities)
+require 'servers.html'(capabilities)
+require 'servers.cssls'(capabilities)
+require 'servers.nil_ls'(capabilities)
+require 'servers.hyprls'(capabilities)
 
 -- Enable lsp servers
 vim.lsp.enable {
@@ -22,4 +26,8 @@ vim.lsp.enable {
   'bashls',
   'rust_analyzer',
   'pyright',
+  'html',
+  'cssls',
+  'nil_ls',
+  'hyprls',
 }

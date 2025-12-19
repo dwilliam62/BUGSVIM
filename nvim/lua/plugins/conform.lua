@@ -48,6 +48,7 @@ return {
       c = { 'clang-format' },
       cpp = { 'clang-format' },
       bash = { 'shfmt' },
+      nix = { 'alejandra' },
     },
   },
 }

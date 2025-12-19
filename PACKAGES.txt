@@ -1,0 +1,200 @@
+================================================================================
+                    bugsvim - Package Installation
+================================================================================
+
+For automated installation, use the provided scripts:
+  • Arch:          bash install-arch.sh
+  • Debian/Ubuntu: bash install-debian.sh
+  • Fedora:        bash install-fedora.sh
+
+Or choose your distro below and copy-paste the command.
+
+================================================================================
+DEBIAN / UBUNTU
+================================================================================
+
+FULL INSTALLATION (All LSPs + Formatters):
+
+sudo apt-get update && sudo apt-get install -y \
+  neovim git ripgrep fd-find curl build-essential pkg-config \
+  lua-language-server python3-pip nodejs npm clang clang-tools \
+  bash-language-server rustup nil stylua shfmt clang-format prettier \
+  lazygit bat wl-clipboard && \
+npm install -g @fsouza/prettierd vscode-langservers-extracted && \
+pip3 install --user ruff pyright
+
+---
+
+MINIMAL INSTALLATION (Just the basics):
+
+sudo apt-get update && sudo apt-get install -y \
+  neovim git ripgrep fd-find nodejs npm python3-pip rustup clang
+
+
+================================================================================
+FEDORA
+================================================================================
+
+FULL INSTALLATION (All LSPs + Formatters):
+
+sudo dnf update -y && sudo dnf install -y \
+  neovim git ripgrep fd curl @development-tools pkg-config \
+  lua lua-language-server python3-devel python3-pip nodejs npm clang \
+  clang-tools-extra bash-language-server rust nil stylua shfmt prettier \
+  lazygit bat wl-clipboard && \
+npm install -g @fsouza/prettierd vscode-langservers-extracted && \
+pip3 install --user ruff pyright
+
+---
+
+MINIMAL INSTALLATION (Just the basics):
+
+sudo dnf install -y neovim git ripgrep fd nodejs npm python3-pip rust clang
+
+
+================================================================================
+ARCH LINUX
+================================================================================
+
+FULL INSTALLATION (All LSPs + Formatters):
+
+sudo pacman -S --noconfirm \
+  neovim git ripgrep fd curl base-devel pkg-config \
+  lua-language-server python nodejs npm clang \
+  bash-language-server rustup nil stylua shfmt clang prettier \
+  lazygit bat wl-clipboard && \
+npm install -g @fsouza/prettierd vscode-langservers-extracted
+
+---
+
+FULL INSTALLATION WITH AUR (Recommended for Arch):
+
+# First, install AUR helper if you don't have one:
+# sudo pacman -S yay
+
+sudo pacman -S --noconfirm \
+  neovim git ripgrep fd curl base-devel pkg-config \
+  lua-language-server python nodejs npm clang \
+  bash-language-server rustup nil stylua shfmt clang prettier \
+  lazygit bat wl-clipboard && \
+npm install -g @fsouza/prettierd vscode-langservers-extracted && \
+yay -S --noconfirm hyprls pyright alejandra-bin prettierd
+
+---
+
+MINIMAL INSTALLATION (Just the basics):
+
+sudo pacman -S --noconfirm \
+  neovim git ripgrep fd nodejs npm python rustup clang
+
+
+================================================================================
+LANGUAGE SERVER & FORMATTER BREAKDOWN
+================================================================================
+
+LSP/Formatter by Language:
+
+  Lua           → lua-language-server + stylua
+  Python        → pyright + ruff_format
+  C/C++         → clangd + clang-format
+  TypeScript    → ts_ls (via nodejs) + prettierd
+  JavaScript    → ts_ls (via nodejs) + prettierd
+  HTML          → html-languageserver (via npm) + prettierd
+  CSS           → cssls (via npm) + prettierd
+  Nix           → nil + alejandra (Arch AUR / Debian: build)
+  Hyprland      → hyprls (Arch AUR / Debian: build from source)
+  Bash          → bash-language-server + shfmt
+  Rust          → rust_analyzer (via rustup) + LSP fallback
+  Tailwind CSS  → tailwindcss (via npm) + prettierd
+
+
+================================================================================
+POST-INSTALLATION VERIFICATION
+================================================================================
+
+After installation, run these commands to verify:
+
+# Check LSP servers are available:
+which lua-language-server
+which clangd
+which pyright
+which nil
+
+# Check npm global packages:
+npm list -g @fsouza/prettierd
+npm list -g vscode-langservers-extracted
+
+# Launch NeoVim and check health:
+nvim --headless -c 'checkhealth' -c 'qa'
+
+
+================================================================================
+COMMON ISSUES & FIXES
+================================================================================
+
+Issue: "hyprls: command not found" (Debian)
+Solution: Build from source or skip if not using Hyprland configs
+  git clone https://github.com/hyprwm/hyprland
+  cd hyprland && make hyprls
+
+Issue: "npm packages not in PATH"
+Solution: Add to ~/.bashrc or ~/.zshrc:
+  export PATH="$HOME/.npm/bin:$PATH"
+
+Issue: "pyright/ruff not found"
+Solution: Install via pip:
+  pip3 install --user pyright ruff
+
+Issue: "Arch: AUR packages missing"
+Solution: Install yay first:
+  pacman -S yay
+  Then run: yay -S hyprls pyright alejandra-bin
+
+
+================================================================================
+SIZE ESTIMATES
+================================================================================
+
+Debian/Ubuntu:
+  Minimal setup:    ~800 MB
+  Full setup:       ~2.5 GB
+
+Arch Linux:
+  Minimal setup:    ~600 MB
+  Full setup (AUR): ~2.0 GB
+
+Fedora:
+  Minimal setup:    ~700 MB
+  Full setup:       ~2.3 GB
+
+
+================================================================================
+OPTIONAL CONVENIENCE TOOLS
+================================================================================
+
+Already included in FULL installation above, but if you want just these:
+
+Debian:
+  sudo apt-get install -y lazygit bat wl-clipboard
+
+Arch:
+  sudo pacman -S --noconfirm lazygit bat wl-clipboard
+
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+1. Copy config:
+   git clone https://github.com/ddubs/bugsvim ~/.config/nvim
+
+2. Launch NeoVim:
+   nvim
+
+3. Plugins will auto-install on first launch (lazy.nvim handles this)
+
+4. Verify everything:
+   :checkhealth
+   :LspInfo
+
+5. Start editing!
