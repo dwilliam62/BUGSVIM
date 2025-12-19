@@ -25,11 +25,11 @@ M.setup = function()
       },
       linehl = false,
     },
-    -- Show virtual text next to error
+    -- Show virtual text next to error (inline diagnostics)
     virtual_text = {
-      severity = {
-        min = vim.diagnostic.severity.WARN,  -- Show WARN and ERROR
-      },
+      prefix = '●',
+      spacing = 2,
+      severity = vim.diagnostic.severity.HINT,  -- Show all severity levels
     },
     -- Underline errors
     underline = true,
