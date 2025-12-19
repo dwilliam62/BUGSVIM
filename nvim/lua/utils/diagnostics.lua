@@ -29,7 +29,9 @@ M.setup = function()
     virtual_text = {
       prefix = '●',
       spacing = 2,
-      severity = vim.diagnostic.severity.HINT,  -- Show all severity levels
+      severity = {
+        min = vim.diagnostic.severity.HINT,  -- Show all severity levels
+      },
     },
     -- Underline errors
     underline = true,
