@@ -69,6 +69,31 @@ echo -e "${BLUE}║   bugsvim - Fedora Installation${NC}"
 echo -e "${BLUE}╚════════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
+# Check NeoVim version
+echo -e "${BLUE}Checking NeoVim version...${NC}"
+if ! command -v nvim &> /dev/null; then
+    echo -e "${RED}✗ NeoVim is not installed${NC}"
+    echo -e "${RED}This configuration requires NeoVim to be installed first${NC}"
+    echo -e "${RED}Install NeoVim with: sudo dnf install neovim${NC}"
+    exit 1
+fi
+
+NVIM_VERSION=$(nvim --version | head -1 | grep -oP 'NVIM v\K[^\s]+')
+echo -e "${GREEN}✓ NeoVim version: $NVIM_VERSION${NC}"
+
+# Check if version is 0.10 or higher
+MAJOR=$(echo $NVIM_VERSION | cut -d. -f1)
+MINOR=$(echo $NVIM_VERSION | cut -d. -f2)
+
+if [ "$MAJOR" -lt 0 ] || ([ "$MAJOR" -eq 0 ] && [ "$MINOR" -lt 10 ]); then
+    echo -e "${RED}✗ NeoVim version 0.10 or higher is required${NC}"
+    echo -e "${RED}Current version: $NVIM_VERSION${NC}"
+    echo -e "${YELLOW}Please upgrade NeoVim: sudo dnf upgrade neovim${NC}"
+    exit 1
+fi
+
+echo ""
+
 # Backup existing config
 backup_neovim_config
 echo ""

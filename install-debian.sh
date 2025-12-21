@@ -69,6 +69,36 @@ echo -e "${BLUE}║   bugsvim - Debian/Ubuntu Installation${NC}"
 echo -e "${BLUE}╚════════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
+# Check NeoVim version
+echo -e "${BLUE}Checking NeoVim version...${NC}"
+if ! command -v nvim &> /dev/null; then
+    echo -e "${RED}✗ NeoVim is not installed${NC}"
+    echo -e "${RED}This configuration requires NeoVim to be installed first${NC}"
+    echo -e "${RED}Install NeoVim with: sudo apt-get install neovim${NC}"
+    exit 1
+fi
+
+NVIM_VERSION=$(nvim --version | head -1 | grep -oP 'NVIM v\K[^\s]+')
+echo -e "${GREEN}✓ NeoVim version: $NVIM_VERSION${NC}"
+
+# Check if version is 0.10 or higher
+MAJOR=$(echo $NVIM_VERSION | cut -d. -f1)
+MINOR=$(echo $NVIM_VERSION | cut -d. -f2)
+
+if [ "$MAJOR" -lt 0 ] || ([ "$MAJOR" -eq 0 ] && [ "$MINOR" -lt 10 ]); then
+    echo -e "${RED}✗ NeoVim version 0.10 or higher is required${NC}"
+    echo -e "${RED}Current version: $NVIM_VERSION${NC}"
+    echo ""
+    echo -e "${YELLOW}Debian/Ubuntu usually packages older versions of NeoVim${NC}"
+    echo -e "${YELLOW}A pre-built package with NeoVim 0.11+ is available at:${NC}"
+    echo -e "${YELLOW}https://codeberg.org/justaguylinux/nvim${NC}"
+    echo ""
+    echo -e "${YELLOW}This includes an install script for easy setup.${NC}"
+    exit 1
+fi
+
+echo ""
+
 # Backup existing config
 backup_neovim_config
 echo ""
