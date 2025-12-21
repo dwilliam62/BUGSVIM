@@ -348,6 +348,6 @@ else
 fi
 echo "  2. Launch neovim: nvim"
 echo "  3. Plugins will auto-install on first launch"
-echo "  4. Verify LSP: :LspInfo"
+echo "  4. Verify LSP: :checkhealth vim.lsp (or :LspInfo if using nvim-lspconfig)"
 echo ""
 echo "See POST-INSTALL.md for additional setup and troubleshooting."
