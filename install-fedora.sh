@@ -283,8 +283,29 @@ echo -e "${GREEN}✓ bugsvim config copied to ~/.config/nvim${NC}"
 
 # Add npm PATH to shell config if not already present
 echo -e "${BLUE}Step 12: Configuring shell PATH for npm...${NC}"
-SHELL_CONFIG="${HOME}/.$(basename $SHELL)rc"
-NPM_PATH_LINE="export PATH=\"$HOME/.npm-global/bin:\$PATH\""
+
+# Detect current shell
+CURRENT_SHELL=$(basename "$SHELL")
+case "$CURRENT_SHELL" in
+    zsh)
+        SHELL_CONFIG="${HOME}/.zshrc"
+        NPM_PATH_LINE="export PATH=\"$HOME/.npm-global/bin:\$PATH\""
+        ;;
+    bash)
+        SHELL_CONFIG="${HOME}/.bashrc"
+        NPM_PATH_LINE="export PATH=\"$HOME/.npm-global/bin:\$PATH\""
+        ;;
+    fish)
+        SHELL_CONFIG="${HOME}/.config/fish/config.fish"
+        NPM_PATH_LINE="set -gx PATH \$HOME/.npm-global/bin \$PATH"
+        ;;
+    *)
+        # For other shells, try .${SHELL}rc pattern
+        SHELL_CONFIG="${HOME}/.${CURRENT_SHELL}rc"
+        NPM_PATH_LINE="export PATH=\"$HOME/.npm-global/bin:\$PATH\""
+        echo -e "${YELLOW}Note: Detected shell '$CURRENT_SHELL' - using $SHELL_CONFIG${NC}"
+        ;;
+esac
 
 if [ -f "$SHELL_CONFIG" ]; then
     if ! grep -q "npm-global" "$SHELL_CONFIG"; then
@@ -294,8 +315,9 @@ if [ -f "$SHELL_CONFIG" ]; then
         echo -e "${GREEN}✓ npm PATH already in $SHELL_CONFIG${NC}"
     fi
 else
-    echo -e "${YELLOW}Creating $SHELL_CONFIG...${NC}"
-    echo "$NPM_PATH_LINE" > "$SHELL_CONFIG"
+    echo -e "${YELLOW}Note: Shell config file not found at $SHELL_CONFIG${NC}"
+    echo -e "${YELLOW}Please add the following line to your shell config manually:${NC}"
+    echo "$NPM_PATH_LINE"
 fi
 
 echo ""
@@ -346,3 +368,16 @@ else
     fi
     echo -e "${YELLOW}However, bugsvim config has been installed to ~/.config/nvim${NC}"
 fi
+
+echo ""
+echo "Next steps:"
+if [ -f "$SHELL_CONFIG" ]; then
+    echo "  1. Reload your shell: source $SHELL_CONFIG"
+else
+    echo "  1. Add npm PATH to your shell config (see note above), then reload"
+fi
+echo "  2. Launch neovim: nvim"
+echo "  3. Plugins will auto-install on first launch"
+echo "  4. Verify LSP: :LspInfo"
+echo ""
+echo "See POST-INSTALL.md for additional setup and troubleshooting."
