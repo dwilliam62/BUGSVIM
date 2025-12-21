@@ -141,14 +141,16 @@ else
 fi
 
 
-echo -e "${BLUE}Step 4: Installing formatters and Python tools...${NC}"
+echo -e "${BLUE}Step 4: Installing formatters, LSP tools, and dependencies...${NC}"
 sudo pacman -S --needed --noconfirm \
     stylua \
     shfmt \
     clang \
     prettier \
     pyright \
-    ruff
+    ruff \
+    wl-clipboard \
+    python-pynvim
 
 echo -e "${BLUE}Step 5: Installing optional convenience tools...${NC}"
 sudo pacman -S --needed --noconfirm \
@@ -168,13 +170,13 @@ fi
 
 echo -e "${BLUE}Step 6: Installing npm global packages...${NC}"
 if command -v npm &> /dev/null; then
-    npm install -g @fsouza/prettierd vscode-langservers-extracted || {
-        FAILED_NPM+=("@fsouza/prettierd" "vscode-langservers-extracted")
+    npm install -g @fsouza/prettierd vscode-langservers-extracted neovim || {
+        FAILED_NPM+=("@fsouza/prettierd" "vscode-langservers-extracted" "neovim")
         echo -e "${YELLOW}Warning: npm package installation failed${NC}"
     }
 else
     echo -e "${RED}✗${NC} npm not available - skipping npm global packages"
-    FAILED_NPM+=("@fsouza/prettierd" "vscode-langservers-extracted")
+    FAILED_NPM+=("@fsouza/prettierd" "vscode-langservers-extracted" "neovim")
 fi
 
 echo -e "${YELLOW}Note: lua-language-server must be installed separately${NC}"
@@ -373,6 +375,7 @@ else
 fi
 echo "  2. Launch neovim: nvim"
 echo "  3. Plugins will auto-install on first launch"
-echo "  4. Verify LSP: :checkhealth vim.lsp (or :LspInfo if using nvim-lspconfig)"
+echo "  4. Treesitter parsers will auto-install (configured in nvim-treesitter)"
+echo "  5. Verify installation: :checkhealth"
 echo ""
 echo "See POST-INSTALL.md for additional setup and troubleshooting."
