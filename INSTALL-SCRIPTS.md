@@ -7,19 +7,31 @@ Automated installation scripts for bugsvim on Arch Linux, Debian/Ubuntu, and Fed
 Choose your distribution and run the corresponding script:
 
 ### Arch Linux
+
 ```bash
 bash install-arch.sh
 ```
 
 ### Debian/Ubuntu
+
 ```bash
 bash install-debian.sh
 ```
 
 ### Fedora
+
 ```bash
 bash install-fedora.sh
 ```
+
+### FreeBSD
+
+```bash
+bash install-freebsd.sh
+```
+
+> Note: FreeBSD only tested with FreeBSD v15.0
+> Script isn't complete but functions.
 
 ## What the Scripts Do
 
@@ -45,6 +57,7 @@ Each script performs the following steps in order:
 ### Arch Linux (`install-arch.sh`)
 
 **Features:**
+
 - Supports both `yay` and `paru` AUR helpers
 - Automatically installs AUR packages if helper is found:
   - hyprls
@@ -53,6 +66,7 @@ Each script performs the following steps in order:
   - prettierd
 
 **Prerequisites:**
+
 - `sudo` access
 - Optional: AUR helper (yay or paru)
 
@@ -63,16 +77,19 @@ Each script performs the following steps in order:
 ### Debian/Ubuntu (`install-debian.sh`)
 
 **Features:**
+
 - Interactive option to build hyprls from source
 - Graceful fallback if hyprls build fails
 - Installs packages from debian repos + npm/pip for unavailable packages
 - Smart detection for packages not in standard repos
 
 **Prerequisites:**
+
 - `sudo` access
 - build-essential for hyprls compilation (optional)
 
 **Special Handling:**
+
 - Includes lua5.1 for Lua development
 - Uses python3-venv for Python environments
 - fd-find package (not just fd)
@@ -88,16 +105,19 @@ Each script performs the following steps in order:
 ### Fedora (`install-fedora.sh`)
 
 **Features:**
+
 - Uses `dnf` package manager
 - Includes development-tools group
 - Initializes Rust toolchain automatically
 - Interactive hyprls build option
 
 **Prerequisites:**
+
 - `sudo` access
 - @development-tools group
 
 **Special Handling:**
+
 - Uses clang-tools-extra instead of clang-tools
 - Uses python3-devel for Python development
 - Uses @development-tools meta-package for build tools
@@ -114,6 +134,7 @@ Each script automatically checks for existing NeoVim configurations and offers t
 ### What Gets Backed Up
 
 If any of these directories exist, they will be backed up:
+
 - `~/.config/nvim` - Configuration files
 - `~/.local/share/nvim` - Plugin data and runtime files
 - `~/.local/state/nvim` - Session state and history
@@ -121,6 +142,7 @@ If any of these directories exist, they will be backed up:
 ### Backup Location
 
 Backups are stored in:
+
 ```
 ~/neovim-backup-YYYYMMDD-HHMMSS/
 ```
@@ -128,6 +150,7 @@ Backups are stored in:
 Example: `~/neovim-backup-20251218-005700/`
 
 Within the backup directory, each location is preserved:
+
 ```
 neovim-backup-20251218-005700/
 ├── .config-nvim/          # From ~/.config/nvim
@@ -138,6 +161,7 @@ neovim-backup-20251218-005700/
 ### Restoring a Backup
 
 If needed, you can restore your backup:
+
 ```bash
 # List backups
 ls ~/ | grep neovim-backup
@@ -151,48 +175,57 @@ cp -r ~/neovim-backup-20251218-005700/.local-state-nvim ~/.local/state/nvim
 ## Usage Examples
 
 ### Run with auto-detection (recommended)
+
 ```bash
 bash install-arch.sh
 ```
 
 ### Run on non-native distro (with confirmation)
+
 ```bash
 # Run Debian script on Ubuntu - will ask for confirmation
 bash install-debian.sh
 ```
 
 ### Skip hyprls build (Debian/Fedora)
+
 When prompted "Build hyprls from source? (y/n)", press 'n'
 
 ### Build hyprls from source
+
 When prompted "Build hyprls from source? (y/n)", press 'y'
 
 ## Troubleshooting
 
 ### Script Exits with Distro Mismatch
+
 The script detected you're not on the expected distro. If you want to continue anyway, answer 'y' to the confirmation prompt.
 
 ### Some Components Missing After Install
+
 Check the verification output at the end. You may need to:
 
 1. **Missing lua-language-server:**
+
    ```bash
    # Debian/Ubuntu
    sudo apt-get install lua-language-server
-   
+
    # Fedora
    sudo dnf install lua-language-server
-   
+
    # Arch
    sudo pacman -S lua-language-server
    ```
 
 2. **Missing pyright:**
+
    ```bash
    pip3 install --user pyright
    ```
 
 3. **Missing npm packages:**
+
    ```bash
    npm install -g @fsouza/prettierd vscode-langservers-extracted
    ```
@@ -211,38 +244,47 @@ Check the verification output at the end. You may need to:
 Some packages are not in standard Debian repos. The script handles this automatically:
 
 **lua-language-server:**
+
 - Installed via npm automatically
 - Manual: `npm install -g lua-language-server`
 
 **bash-language-server:**
+
 - Installed via npm automatically
 - Manual: `npm install -g bash-language-server`
 
 **nil (Nix LSP):**
+
 - Script attempts standard install but gracefully skips if unavailable
 - Manual install (requires Nix): `nix run github:oxalica/nil`
 - Source build: See https://github.com/oxalica/nil
 
 ### npm: command not found
+
 Node.js/npm not installed. Install manually:
 
 **Arch:**
+
 ```bash
 sudo pacman -S nodejs npm
 ```
 
 **Debian:**
+
 ```bash
 sudo apt-get install nodejs npm
 ```
 
 **Fedora:**
+
 ```bash
 sudo dnf install nodejs npm
 ```
 
 ### Permission denied when running script
+
 Make the script executable:
+
 ```bash
 chmod +x install-arch.sh  # or install-debian.sh, install-fedora.sh
 bash install-arch.sh
@@ -251,6 +293,7 @@ bash install-arch.sh
 ## Advanced: Manual Installation
 
 If you prefer to install manually, see:
+
 - `INSTALL.md` - Detailed manual installation instructions per distro
 - `PACKAGES.txt` - Copy-paste package lists
 
@@ -282,23 +325,27 @@ nvim --headless -c 'checkhealth' -c 'qa'
 ## Next Steps After Installation
 
 1. **Clone bugsvim configuration:**
+
    ```bash
    git clone https://github.com/ddubs/bugsvim ~/.config/nvim
    ```
 
 2. **Launch NeoVim:**
+
    ```bash
    nvim
    ```
-   
+
    On first launch, lazy.nvim will automatically install all plugins.
 
 3. **Verify LSP servers:**
+
    ```vim
    :LspInfo
    ```
 
 4. **Check overall health:**
+
    ```vim
    :checkhealth
    ```
@@ -308,6 +355,7 @@ nvim --headless -c 'checkhealth' -c 'qa'
 ## Script Maintenance
 
 The scripts are designed to be idempotent - you can run them multiple times without issues. They will:
+
 - Update existing packages
 - Skip already-installed packages
 - Re-verify all components
@@ -338,6 +386,7 @@ INTERACTIVE=n bash install-debian.sh
 ## Permissions
 
 Scripts require `sudo` access for package installation. They will NOT:
+
 - Modify system files outside of package management
 - Create files in your home directory
 - Change your shell or environment
