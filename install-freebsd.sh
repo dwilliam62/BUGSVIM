@@ -14,6 +14,12 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Error tracking
+FAILED_PACKAGES=()
+FAILED_NPM=()
+FAILED_PYTHON=()
+FAILED_LUALS=()
+
 # ================================================================================================
 # Backup existing NeoVim configuration
 # ================================================================================================
@@ -117,9 +123,14 @@ run_as_root pkg install -y \
   bash || true
 
 echo -e "${BLUE}Step 3b: Configuring npm for user installs...${NC}"
-mkdir -p ~/.npm-global
-npm config set prefix '~/.npm-global' --location=per-user 2>/dev/null || true
-export PATH=~/.npm-global/bin:$PATH
+if ! command -v npm &> /dev/null; then
+  echo -e "${RED}✗${NC} npm not found - skipping npm configuration"
+  FAILED_PACKAGES+=("npm")
+else
+  mkdir -p ~/.npm-global
+  npm config set prefix '~/.npm-global' --location=per-user 2>/dev/null || true
+  export PATH=~/.npm-global/bin:$PATH
+fi
 
 echo -e "${BLUE}Step 3c: Installing bash-language-server...${NC}"
 npm install -g bash-language-server || echo -e "${YELLOW}Warning: bash-language-server install failed${NC}"
@@ -143,11 +154,26 @@ run_as_root pkg install -y \
   xclip || true
 
 echo -e "${BLUE}Step 6: Installing npm global packages...${NC}"
-npm install -g @fsouza/prettierd vscode-langservers-extracted || echo -e "${YELLOW}Warning: npm packages install failed${NC}"
+if command -v npm &> /dev/null; then
+  npm install -g @fsouza/prettierd vscode-langservers-extracted || {
+    FAILED_NPM+=("@fsouza/prettierd" "vscode-langservers-extracted")
+    echo -e "${YELLOW}Warning: npm packages install failed${NC}"
+  }
+else
+  echo -e "${RED}✗${NC} npm not available - skipping npm global packages"
+  FAILED_NPM+=("@fsouza/prettierd" "vscode-langservers-extracted")
+fi
 
 echo -e "${BLUE}Step 7: Installing Python packages...${NC}"
 # Use py39 specifically since we installed that version
-py39-pip install --user ruff pyright || echo -e "${YELLOW}Warning: Python packages install failed${NC}"
+if command -v py39-pip &> /dev/null; then
+  py39-pip install --user ruff pyright || FAILED_PYTHON+=("ruff" "pyright")
+elif command -v python39 &> /dev/null; then
+  python39 -m pip install --user ruff pyright || FAILED_PYTHON+=("ruff" "pyright")
+else
+  echo -e "${RED}✗${NC} Python39 not found - skipping Python packages"
+  FAILED_PYTHON+=("ruff" "pyright")
+fi
 
 echo -e "${YELLOW}Note: lua-language-server must be installed separately${NC}"
 echo -e "${YELLOW}Install from: https://github.com/LuaLS/lua-language-server/releases${NC}"
@@ -174,10 +200,15 @@ echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
   if [ -d /usr/ports/devel/lua-language-server ]; then
     echo -e "${BLUE}Building lua-language-server from ports...${NC}"
-    (cd /usr/ports/devel/lua-language-server && run_as_root make install clean) ||
+    if (cd /usr/ports/devel/lua-language-server && run_as_root make install clean); then
+      echo -e "${GREEN}✓ lua-language-server installed${NC}"
+    else
       echo -e "${YELLOW}Warning: lua-language-server build failed${NC}"
+      FAILED_LUALS+=("lua-language-server")
+    fi
   else
     echo -e "${YELLOW}lua-language-server not found in ports${NC}"
+    FAILED_LUALS+=("lua-language-server")
     echo -e "${YELLOW}Try updating ports first: portsnap fetch update${NC}"
   fi
 else
@@ -271,14 +302,52 @@ else
 fi
 
 echo ""
-if [ $MISSING -eq 0 ]; then
-  echo -e "${GREEN}╔════════════════════════════════════════════════════════════════╗${NC}"
-  echo -e "${GREEN}║   Installation completed successfully! ✓${NC}"
-  echo -e "${GREEN}╚════════════════════════════════════════════════════════════════╝${NC}"
+echo -e "${BLUE}╔════════════════════════════════════════════════════════════════╗${NC}"
+echo -e "${BLUE}║   Installation Summary${NC}"
+echo -e "${BLUE}╚════════════════════════════════════════════════════════════════╝${NC}"
+echo ""
+
+if [ ${#FAILED_PACKAGES[@]} -gt 0 ]; then
+  echo -e "${RED}Failed to install packages:${NC}"
+  for pkg in "${FAILED_PACKAGES[@]}"; do
+    echo "  • $pkg"
+  done
+  echo ""
+fi
+
+if [ ${#FAILED_NPM[@]} -gt 0 ]; then
+  echo -e "${RED}Failed to install npm packages:${NC}"
+  for pkg in "${FAILED_NPM[@]}"; do
+    echo "  • $pkg"
+  done
+  echo ""
+fi
+
+if [ ${#FAILED_PYTHON[@]} -gt 0 ]; then
+  echo -e "${RED}Failed to install Python packages:${NC}"
+  for pkg in "${FAILED_PYTHON[@]}"; do
+    echo "  • $pkg"
+  done
+  echo ""
+fi
+
+if [ ${#FAILED_LUALS[@]} -gt 0 ]; then
+  echo -e "${RED}Failed to build optional tools:${NC}"
+  for pkg in "${FAILED_LUALS[@]}"; do
+    echo "  • $pkg (optional)"
+  done
+  echo ""
+fi
+
+if [ $MISSING -eq 0 ] && [ ${#FAILED_PACKAGES[@]} -eq 0 ] && [ ${#FAILED_NPM[@]} -eq 0 ] && [ ${#FAILED_PYTHON[@]} -eq 0 ] && [ ${#FAILED_LUALS[@]} -eq 0 ]; then
+  echo -e "${GREEN}✓ Installation completed successfully!${NC}"
 else
-  echo -e "${YELLOW}⚠ Note: Some components are missing (see above)${NC}"
+  if [ ${#FAILED_LUALS[@]} -gt 0 ] && [ $MISSING -eq 0 ] && [ ${#FAILED_PACKAGES[@]} -eq 0 ] && [ ${#FAILED_NPM[@]} -eq 0 ] && [ ${#FAILED_PYTHON[@]} -eq 0 ]; then
+    echo -e "${YELLOW}⚠ Installation mostly successful, but optional tools failed${NC}"
+  else
+    echo -e "${YELLOW}⚠ Installation completed with some issues (see above)${NC}"
+  fi
   echo -e "${YELLOW}However, bugsvim config has been installed to ~/.config/nvim${NC}"
-  echo -e "${YELLOW}You can install missing components manually if needed${NC}"
 fi
 
 echo ""

@@ -14,6 +14,12 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Error tracking
+FAILED_PACKAGES=()
+FAILED_NPM=()
+FAILED_PYTHON=()
+FAILED_HYPRLS=()
+
 # ================================================================================================
 # Backup existing NeoVim configuration
 # ================================================================================================
@@ -105,10 +111,15 @@ sudo apt-get install -y \
     rustup || true
 
 echo -e "${BLUE}Step 3b: Setting up npm for global installs...${NC}"
-# Configure npm to use user directory instead of global (avoids permission issues)
-mkdir -p ~/.npm-global
-npm config set prefix '~/.npm-global' --location=per-user 2>/dev/null || true
-export PATH=~/.npm-global/bin:$PATH
+if ! command -v npm &> /dev/null; then
+    echo -e "${RED}✗${NC} npm not found - skipping npm configuration"
+    FAILED_PACKAGES+=("npm")
+else
+    # Configure npm to use user directory instead of global (avoids permission issues)
+    mkdir -p ~/.npm-global
+    npm config set prefix '~/.npm-global' --location=per-user 2>/dev/null || true
+    export PATH=~/.npm-global/bin:$PATH
+fi
 
 echo -e "${BLUE}Step 3c: Installing language servers from npm...${NC}"
 echo -e "${YELLOW}Note: lua-language-server must be installed separately${NC}"
@@ -140,16 +151,29 @@ sudo apt-get install -y \
     wl-clipboard || true
 
 echo -e "${BLUE}Step 6: Installing npm global packages...${NC}"
-echo -e "${BLUE}  Installing prettierd...${NC}"
-npm install -g @fsouza/prettierd || echo -e "${YELLOW}Warning: prettierd install failed${NC}"
-
-echo -e "${BLUE}  Installing vscode-langservers...${NC}"
-npm install -g vscode-langservers-extracted || echo -e "${YELLOW}Warning: vscode-langservers-extracted install failed${NC}"
+if command -v npm &> /dev/null; then
+    echo -e "${BLUE}  Installing prettierd...${NC}"
+    npm install -g @fsouza/prettierd || FAILED_NPM+=("@fsouza/prettierd")
+    
+    echo -e "${BLUE}  Installing vscode-langservers...${NC}"
+    npm install -g vscode-langservers-extracted || FAILED_NPM+=("vscode-langservers-extracted")
+else
+    echo -e "${RED}✗${NC} npm not available - skipping npm global packages"
+    FAILED_NPM+=("@fsouza/prettierd" "vscode-langservers-extracted")
+fi
 
 echo -e "${BLUE}Step 7: Installing Python packages...${NC}"
 # Ubuntu 25.10+ enforces PEP 668, use --break-system-packages for user installs
-pip3 install --user --break-system-packages ruff pyright 2>/dev/null || \
-pip3 install --user ruff pyright || echo -e "${YELLOW}Warning: Python packages install failed${NC}"
+if command -v pip3 &> /dev/null; then
+    pip3 install --user --break-system-packages ruff pyright 2>/dev/null || \
+    pip3 install --user ruff pyright || FAILED_PYTHON+=("ruff" "pyright")
+elif command -v python3 &> /dev/null; then
+    python3 -m pip install --user --break-system-packages ruff pyright 2>/dev/null || \
+    python3 -m pip install --user ruff pyright || FAILED_PYTHON+=("ruff" "pyright")
+else
+    echo -e "${RED}✗${NC} Python not found - skipping Python packages"
+    FAILED_PYTHON+=("ruff" "pyright")
+fi
 
 echo -e "${BLUE}Step 8: Optional - Build hyprls from source${NC}"
 read -p "Build hyprls from source? (y/n) " -n 1 -r
@@ -170,6 +194,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         echo -e "${GREEN}✓ hyprls installed${NC}"
     else
         echo -e "${YELLOW}⚠ hyprls build failed (check dependencies)${NC}"
+        FAILED_HYPRLS+=("hyprls")
         echo "  Install build dependencies: cmake, meson, wayland-protocols, libwayland-dev"
     fi
 else
@@ -223,7 +248,7 @@ fi
 
 echo ""
 echo "Checking Python packages:"
-if python3 -c "import pyright" 2>/dev/null || pip3 show pyright &>/dev/null; then
+if python3 -c "import pyright" 2>/dev/null || python3 -m pip show pyright &>/dev/null; then
     echo -e "  ${GREEN}✓${NC} pyright"
 else
     echo -e "  ${RED}✗${NC} pyright (missing)"
@@ -256,12 +281,51 @@ else
 fi
 
 echo ""
-if [ $MISSING -eq 0 ]; then
-    echo -e "${GREEN}╔════════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${GREEN}║   Installation completed successfully! ✓${NC}"
-    echo -e "${GREEN}╚════════════════════════════════════════════════════════════════╝${NC}"
+echo -e "${BLUE}╔════════════════════════════════════════════════════════════════╗${NC}"
+echo -e "${BLUE}║   Installation Summary${NC}"
+echo -e "${BLUE}╚════════════════════════════════════════════════════════════════╝${NC}"
+echo ""
+
+if [ ${#FAILED_PACKAGES[@]} -gt 0 ]; then
+    echo -e "${RED}Failed to install packages:${NC}"
+    for pkg in "${FAILED_PACKAGES[@]}"; do
+        echo "  • $pkg"
+    done
+    echo ""
+fi
+
+if [ ${#FAILED_NPM[@]} -gt 0 ]; then
+    echo -e "${RED}Failed to install npm packages:${NC}"
+    for pkg in "${FAILED_NPM[@]}"; do
+        echo "  • $pkg"
+    done
+    echo ""
+fi
+
+if [ ${#FAILED_PYTHON[@]} -gt 0 ]; then
+    echo -e "${RED}Failed to install Python packages:${NC}"
+    for pkg in "${FAILED_PYTHON[@]}"; do
+        echo "  • $pkg"
+    done
+    echo ""
+fi
+
+if [ ${#FAILED_HYPRLS[@]} -gt 0 ]; then
+    echo -e "${RED}Failed to build optional tools:${NC}"
+    for pkg in "${FAILED_HYPRLS[@]}"; do
+        echo "  • $pkg (optional)"
+    done
+    echo ""
+fi
+
+if [ $MISSING -eq 0 ] && [ ${#FAILED_PACKAGES[@]} -eq 0 ] && [ ${#FAILED_NPM[@]} -eq 0 ] && [ ${#FAILED_PYTHON[@]} -eq 0 ] && [ ${#FAILED_HYPRLS[@]} -eq 0 ]; then
+    echo -e "${GREEN}✓ Installation completed successfully!${NC}"
 else
-    echo -e "${YELLOW}⚠ Note: Some components are missing (see above)${NC}"
+    if [ ${#FAILED_HYPRLS[@]} -gt 0 ] && [ $MISSING -eq 0 ] && [ ${#FAILED_PACKAGES[@]} -eq 0 ] && [ ${#FAILED_NPM[@]} -eq 0 ] && [ ${#FAILED_PYTHON[@]} -eq 0 ]; then
+        echo -e "${YELLOW}⚠ Installation mostly successful, but optional tools failed${NC}"
+    else
+        echo -e "${YELLOW}⚠ Installation completed with some issues (see above)${NC}"
+    fi
     echo -e "${YELLOW}However, bugsvim config has been installed to ~/.config/nvim${NC}"
     echo -e "${YELLOW}You can install missing components manually if needed${NC}"
 fi

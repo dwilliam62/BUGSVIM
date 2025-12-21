@@ -14,6 +14,12 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Error tracking
+FAILED_PACKAGES=()
+FAILED_NPM=()
+FAILED_PYTHON=()
+FAILED_AUR=()
+
 # ================================================================================================
 # Backup existing NeoVim configuration
 # ================================================================================================
@@ -123,12 +129,25 @@ sudo pacman -S --needed --noconfirm \
     wl-clipboard || true
 
 echo -e "${BLUE}Step 5b: Configuring npm for user installs...${NC}"
-mkdir -p ~/.npm-global
-npm config set prefix '~/.npm-global' --location=per-user 2>/dev/null || true
-export PATH=~/.npm-global/bin:$PATH
+if ! command -v npm &> /dev/null; then
+    echo -e "${RED}✗${NC} npm not found - skipping npm configuration"
+    FAILED_PACKAGES+=("npm")
+else
+    mkdir -p ~/.npm-global
+    npm config set prefix '~/.npm-global' --location=per-user 2>/dev/null || true
+    export PATH=~/.npm-global/bin:$PATH
+fi
 
 echo -e "${BLUE}Step 6: Installing npm global packages...${NC}"
-npm install -g @fsouza/prettierd vscode-langservers-extracted
+if command -v npm &> /dev/null; then
+    npm install -g @fsouza/prettierd vscode-langservers-extracted || {
+        FAILED_NPM+=("@fsouza/prettierd" "vscode-langservers-extracted")
+        echo -e "${YELLOW}Warning: npm package installation failed${NC}"
+    }
+else
+    echo -e "${RED}✗${NC} npm not available - skipping npm global packages"
+    FAILED_NPM+=("@fsouza/prettierd" "vscode-langservers-extracted")
+fi
 
 echo -e "${YELLOW}Note: lua-language-server must be installed separately${NC}"
 echo -e "${YELLOW}Install from: https://github.com/LuaLS/lua-language-server/releases${NC}"
@@ -136,26 +155,41 @@ echo -e "${YELLOW}Add to PATH: export PATH=\"${HOME}/.config/lsp/lua-language-se
 
 echo -e "${BLUE}Step 6b: Installing Python packages...${NC}"
 # Arch enforces PEP 668, use --break-system-packages for user installs
-pip3 install --user --break-system-packages pyright ruff 2>/dev/null || \
-pip3 install --user pyright ruff || echo -e "${YELLOW}Warning: Python packages install failed${NC}"
+if command -v pip3 &> /dev/null; then
+    pip3 install --user --break-system-packages pyright ruff 2>/dev/null || \
+    pip3 install --user pyright ruff || {
+        FAILED_PYTHON+=("pyright" "ruff")
+        echo -e "${YELLOW}Warning: Python packages install failed${NC}"
+    }
+elif command -v python &> /dev/null; then
+    python -m pip install --user --break-system-packages pyright ruff 2>/dev/null || \
+    python -m pip install --user pyright ruff || {
+        FAILED_PYTHON+=("pyright" "ruff")
+        echo -e "${YELLOW}Warning: Python packages install failed${NC}"
+    }
+else
+    echo -e "${RED}✗${NC} Python not found - skipping Python packages"
+    FAILED_PYTHON+=("pyright" "ruff")
+fi
 
 echo -e "${BLUE}Step 7: Checking for AUR helper...${NC}"
 if command -v yay &> /dev/null; then
     echo -e "${GREEN}✓ yay found${NC}"
     echo -e "${BLUE}Step 8: Installing AUR packages (recommended)...${NC}"
-    yay -S --noconfirm \
-        hyprls \
-        alejandra-bin \
-        prettierd || true
+    yay -S --noconfirm hyprls alejandra-bin prettierd || {
+        FAILED_AUR+=("hyprls" "alejandra-bin" "prettierd")
+        echo -e "${YELLOW}Warning: Some AUR packages failed to install${NC}"
+    }
 elif command -v paru &> /dev/null; then
     echo -e "${GREEN}✓ paru found${NC}"
     echo -e "${BLUE}Step 8: Installing AUR packages (recommended)...${NC}"
-    paru -S --noconfirm \
-        hyprls \
-        alejandra-bin \
-        prettierd || true
+    paru -S --noconfirm hyprls alejandra-bin prettierd || {
+        FAILED_AUR+=("hyprls" "alejandra-bin" "prettierd")
+        echo -e "${YELLOW}Warning: Some AUR packages failed to install${NC}"
+    }
 else
     echo -e "${YELLOW}⚠ No AUR helper found (yay/paru)${NC}"
+    FAILED_AUR+=("hyprls" "alejandra-bin" "prettierd")
     echo -e "${YELLOW}Install these manually or install an AUR helper first:${NC}"
     echo "  • hyprls (Hyprland LSP)"
     echo "  • pyright (Python LSP - faster than pip)"
@@ -238,12 +272,51 @@ else
 fi
 
 echo ""
-if [ $MISSING -eq 0 ]; then
-    echo -e "${GREEN}╔════════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${GREEN}║   Installation completed successfully! ✓${NC}"
-    echo -e "${GREEN}╚════════════════════════════════════════════════════════════════╝${NC}"
+echo -e "${BLUE}╔════════════════════════════════════════════════════════════════╗${NC}"
+echo -e "${BLUE}║   Installation Summary${NC}"
+echo -e "${BLUE}╚════════════════════════════════════════════════════════════════╝${NC}"
+echo ""
+
+if [ ${#FAILED_PACKAGES[@]} -gt 0 ]; then
+    echo -e "${RED}Failed to install packages:${NC}"
+    for pkg in "${FAILED_PACKAGES[@]}"; do
+        echo "  • $pkg"
+    done
+    echo ""
+fi
+
+if [ ${#FAILED_NPM[@]} -gt 0 ]; then
+    echo -e "${RED}Failed to install npm packages:${NC}"
+    for pkg in "${FAILED_NPM[@]}"; do
+        echo "  • $pkg"
+    done
+    echo ""
+fi
+
+if [ ${#FAILED_PYTHON[@]} -gt 0 ]; then
+    echo -e "${RED}Failed to install Python packages:${NC}"
+    for pkg in "${FAILED_PYTHON[@]}"; do
+        echo "  • $pkg"
+    done
+    echo ""
+fi
+
+if [ ${#FAILED_AUR[@]} -gt 0 ]; then
+    echo -e "${RED}AUR packages not installed (no AUR helper or installation failed):${NC}"
+    for pkg in "${FAILED_AUR[@]}"; do
+        echo "  • $pkg"
+    done
+    echo ""
+fi
+
+if [ $MISSING -eq 0 ] && [ ${#FAILED_PACKAGES[@]} -eq 0 ] && [ ${#FAILED_NPM[@]} -eq 0 ] && [ ${#FAILED_PYTHON[@]} -eq 0 ] && [ ${#FAILED_AUR[@]} -eq 0 ]; then
+    echo -e "${GREEN}✓ Installation completed successfully!${NC}"
 else
-    echo -e "${YELLOW}⚠ Note: Some components are missing (see above)${NC}"
+    if [ $MISSING -eq 0 ] && [ ${#FAILED_PACKAGES[@]} -eq 0 ] && [ ${#FAILED_NPM[@]} -eq 0 ] && [ ${#FAILED_PYTHON[@]} -eq 0 ]; then
+        echo -e "${YELLOW}⚠ Installation mostly successful, but AUR packages require manual setup${NC}"
+    else
+        echo -e "${YELLOW}⚠ Installation completed with some issues (see above)${NC}"
+    fi
     echo -e "${YELLOW}However, bugsvim config has been installed to ~/.config/nvim${NC}"
     echo -e "${YELLOW}You can install missing components manually if needed${NC}"
 fi
