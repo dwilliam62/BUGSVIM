@@ -99,6 +99,7 @@ echo -e "${BLUE}Step 3: Installing language servers...${NC}"
 sudo pacman -S --needed --noconfirm \
     lua-language-server \
     python \
+    python-pip \
     nodejs \
     npm \
     clang \
@@ -115,12 +116,14 @@ else
 fi
 
 
-echo -e "${BLUE}Step 4: Installing formatters...${NC}"
+echo -e "${BLUE}Step 4: Installing formatters and Python tools...${NC}"
 sudo pacman -S --needed --noconfirm \
     stylua \
     shfmt \
     clang \
-    prettier
+    prettier \
+    pyright \
+    ruff
 
 echo -e "${BLUE}Step 5: Installing optional convenience tools...${NC}"
 sudo pacman -S --needed --noconfirm \
@@ -153,24 +156,7 @@ echo -e "${YELLOW}Note: lua-language-server must be installed separately${NC}"
 echo -e "${YELLOW}Install from: https://github.com/LuaLS/lua-language-server/releases${NC}"
 echo -e "${YELLOW}Add to PATH: export PATH=\"${HOME}/.config/lsp/lua-language-server/bin:\$PATH\"${NC}"
 
-echo -e "${BLUE}Step 6b: Installing Python packages...${NC}"
-# Arch enforces PEP 668, use --break-system-packages for user installs
-if command -v pip3 &> /dev/null; then
-    pip3 install --user --break-system-packages pyright ruff 2>/dev/null || \
-    pip3 install --user pyright ruff || {
-        FAILED_PYTHON+=("pyright" "ruff")
-        echo -e "${YELLOW}Warning: Python packages install failed${NC}"
-    }
-elif command -v python &> /dev/null; then
-    python -m pip install --user --break-system-packages pyright ruff 2>/dev/null || \
-    python -m pip install --user pyright ruff || {
-        FAILED_PYTHON+=("pyright" "ruff")
-        echo -e "${YELLOW}Warning: Python packages install failed${NC}"
-    }
-else
-    echo -e "${RED}✗${NC} Python not found - skipping Python packages"
-    FAILED_PYTHON+=("pyright" "ruff")
-fi
+# Python packages (pyright, ruff) are now installed via pacman in Step 4
 
 echo -e "${BLUE}Step 7: Checking for AUR helper...${NC}"
 if command -v yay &> /dev/null; then
@@ -192,7 +178,6 @@ else
     FAILED_AUR+=("hyprls" "alejandra-bin" "prettierd")
     echo -e "${YELLOW}Install these manually or install an AUR helper first:${NC}"
     echo "  • hyprls (Hyprland LSP)"
-    echo "  • pyright (Python LSP - faster than pip)"
     echo "  • alejandra-bin (Nix formatter)"
     echo "  • prettierd (Prettier daemon)"
     echo ""
@@ -222,6 +207,17 @@ done
 echo ""
 echo "Checking formatters:"
 for cmd in stylua shfmt clang-format; do
+    if command -v "$cmd" &> /dev/null; then
+        echo -e "  ${GREEN}✓${NC} $cmd"
+    else
+        echo -e "  ${RED}✗${NC} $cmd (missing)"
+        MISSING=1
+    fi
+done
+
+echo ""
+echo "Checking Python language tools:"
+for cmd in pyright ruff; do
     if command -v "$cmd" &> /dev/null; then
         echo -e "  ${GREEN}✓${NC} $cmd"
     else

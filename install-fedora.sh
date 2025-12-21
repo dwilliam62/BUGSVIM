@@ -158,13 +158,20 @@ else
 fi
 
 echo -e "${BLUE}Step 7: Installing Python packages...${NC}"
+PYTHON_INSTALLED=0
+
 if command -v pip3 &> /dev/null; then
-    pip3 install --user ruff pyright || FAILED_PYTHON+=("ruff" "pyright")
-elif command -v python3 &> /dev/null; then
-    python3 -m pip install --user ruff pyright || FAILED_PYTHON+=("ruff" "pyright")
-else
-    echo -e "${RED}✗${NC} Python not found - skipping Python packages"
+    pip3 install --user --break-system-packages ruff pyright 2>/dev/null && PYTHON_INSTALLED=1
+fi
+
+if [ $PYTHON_INSTALLED -eq 0 ] && command -v python3 &> /dev/null; then
+    python3 -m ensurepip --user 2>/dev/null || true
+    python3 -m pip install --user --break-system-packages ruff pyright 2>/dev/null && PYTHON_INSTALLED=1
+fi
+
+if [ $PYTHON_INSTALLED -eq 0 ]; then
     FAILED_PYTHON+=("ruff" "pyright")
+    echo -e "${YELLOW}Warning: Python packages install failed${NC}"
 fi
 
 echo -e "${BLUE}Step 8: Verifying Rust installation...${NC}"

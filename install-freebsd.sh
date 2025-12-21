@@ -166,13 +166,20 @@ fi
 
 echo -e "${BLUE}Step 7: Installing Python packages...${NC}"
 # Use py39 specifically since we installed that version
+PYTHON_INSTALLED=0
+
 if command -v py39-pip &> /dev/null; then
-  py39-pip install --user ruff pyright || FAILED_PYTHON+=("ruff" "pyright")
-elif command -v python39 &> /dev/null; then
-  python39 -m pip install --user ruff pyright || FAILED_PYTHON+=("ruff" "pyright")
-else
-  echo -e "${RED}✗${NC} Python39 not found - skipping Python packages"
+  py39-pip install --user ruff pyright 2>/dev/null && PYTHON_INSTALLED=1
+fi
+
+if [ $PYTHON_INSTALLED -eq 0 ] && command -v python39 &> /dev/null; then
+  python39 -m ensurepip --user 2>/dev/null || true
+  python39 -m pip install --user ruff pyright 2>/dev/null && PYTHON_INSTALLED=1
+fi
+
+if [ $PYTHON_INSTALLED -eq 0 ]; then
   FAILED_PYTHON+=("ruff" "pyright")
+  echo -e "${YELLOW}Warning: Python packages install failed${NC}"
 fi
 
 echo -e "${YELLOW}Note: lua-language-server must be installed separately${NC}"
