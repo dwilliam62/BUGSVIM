@@ -100,7 +100,7 @@ return {
           { 'location', padding = { left = 0, right = 1 } },
         },
         lualine_z = {
-          { lualine_utils.lualine.pretty_date },
+          lualine_utils.lualine.pretty_time,
         },
       },
       extensions = { 'lazy' },

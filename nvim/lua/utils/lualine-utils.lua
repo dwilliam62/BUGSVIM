@@ -1,21 +1,8 @@
+-- ================================================================================================
+-- TITLE: Neovim lualine utils
+-- ABOUT: defines some utility function for lualine
+-- ================================================================================================
 local M = {}
-
--- Icon configuration
-M.config = {
-  icons = {
-    diagnostics = {
-      Error = ' ',
-      Warn = ' ',
-      Hint = ' ',
-      Info = ' ',
-    },
-    git = {
-      added = ' ',
-      modified = ' ',
-      removed = ' ',
-    },
-  },
-}
 
 -- Lualine components
 M.lualine = {}
@@ -101,7 +88,7 @@ function M.lualine.root_dir(opts)
 end
 
 -- Pretty date
-function M.lualine.pretty_date()
+function M.lualine.pretty_time()
   local hour = tonumber(os.date '%H')
   local clocks = {
     '󱑊 ', -- 12
