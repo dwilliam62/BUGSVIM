@@ -5,7 +5,13 @@
 
 ---
 
-# 🚀 **Current Release - v1.0.1**
+# 🚀 **Current Release - v1.0.2**
+
+#### 📅 **Updated: December 23st, 2025**
+
+- Added:
+  - Install script for gentoo
+    - First pass
 
 #### 📅 **Updated: December 21st, 2025**
 
