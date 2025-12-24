@@ -110,11 +110,32 @@ fi
 # Get the script directory before any cd operations
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# ================================================================================================
+# Helper function to check if packages are installed
+# ================================================================================================
+check_and_install_packages() {
+  local packages=("$@")
+  local to_install=()
+  
+  for pkg in "${packages[@]}"; do
+    if ! qlist -I "$pkg" &>/dev/null; then
+      to_install+=("$pkg")
+    fi
+  done
+  
+  if [ ${#to_install[@]} -gt 0 ]; then
+    echo -e "${BLUE}Installing missing packages: ${to_install[*]}${NC}"
+    sudo emerge --noreplace "${to_install[@]}"
+  else
+    echo -e "${GREEN}✓ All packages already installed${NC}"
+  fi
+}
+
 echo -e "${BLUE}Step 1: Syncing package repository...${NC}"
 sudo emerge --sync || true
 
 echo -e "${BLUE}Step 2: Installing core dependencies...${NC}"
-sudo emerge --noreplace \
+check_and_install_packages \
   app-editors/neovim \
   dev-vcs/git \
   sys-apps/ripgrep \
@@ -124,12 +145,20 @@ sudo emerge --noreplace \
   dev-ruby/pkg-config
 
 echo -e "${BLUE}Step 3: Installing language servers and development tools...${NC}"
-sudo emerge --noreplace \
+check_and_install_packages \
   dev-lang/lua \
   dev-lang/python \
   net-libs/nodejs \
-  llvm-core/clang \
-  dev-lang/rust
+  llvm-core/clang
+
+# Rust - check before installing to avoid reinstallation
+echo -e "${BLUE}  Checking Rust installation...${NC}"
+if qlist -I dev-lang/rust &>/dev/null; then
+  echo -e "${GREEN}✓ Rust already installed${NC}"
+else
+  echo -e "${BLUE}  Installing Rust...${NC}"
+  sudo emerge --noreplace dev-lang/rust
+fi
 
 echo -e "${BLUE}Step 3b: Setting up npm for global installs...${NC}"
 if ! command -v npm &>/dev/null; then
@@ -147,7 +176,9 @@ echo -e "${BLUE}Step 4: Installing formatters...${NC}"
 
 # stylua - available in app-editors/stylua
 echo -e "${BLUE}  Installing stylua (Lua formatter)...${NC}"
-if sudo emerge --noreplace app-editors/stylua; then
+if qlist -I app-editors/stylua &>/dev/null; then
+  echo -e "${GREEN}✓ stylua already installed${NC}"
+elif sudo emerge --noreplace app-editors/stylua; then
   echo -e "${GREEN}✓ stylua installed${NC}"
 else
   echo -e "${YELLOW}Warning: stylua install failed${NC}"
@@ -155,7 +186,9 @@ fi
 
 # shfmt - available in app-shells/shfmt
 echo -e "${BLUE}  Installing shfmt (Shell formatter)...${NC}"
-if sudo emerge --noreplace app-shells/shfmt; then
+if qlist -I app-shells/shfmt &>/dev/null; then
+  echo -e "${GREEN}✓ shfmt already installed${NC}"
+elif sudo emerge --noreplace app-shells/shfmt; then
   echo -e "${GREEN}✓ shfmt installed${NC}"
 else
   echo -e "${YELLOW}Warning: shfmt not available - will install via npm${NC}"
@@ -175,7 +208,7 @@ echo -e "${BLUE}  Installing prettier (Web formatter)...${NC}"
 npm install -g prettier || FAILED_NPM+=("prettier")
 
 echo -e "${BLUE}Step 5: Installing optional convenience tools...${NC}"
-sudo emerge --noreplace \
+check_and_install_packages \
   dev-vcs/lazygit \
   sys-apps/bat \
   x11-misc/wl-clipboard || true
@@ -214,7 +247,9 @@ fi
 
 echo -e "${BLUE}Step 8: Installing Lua Language Server...${NC}"
 echo -e "${YELLOW}Note: lua-language-server may need to be installed from source${NC}"
-if sudo emerge --noreplace dev-lang/lua-language-server 2>/dev/null; then
+if qlist -I dev-lang/lua-language-server &>/dev/null; then
+  echo -e "${GREEN}✓ lua-language-server already installed${NC}"
+elif sudo emerge --noreplace dev-lang/lua-language-server 2>/dev/null; then
   echo -e "${GREEN}✓ lua-language-server installed${NC}"
 else
   echo -e "${YELLOW}⚠ lua-language-server not available in main repo${NC}"
@@ -224,7 +259,9 @@ else
 fi
 
 echo -e "${BLUE}Step 9: Installing Nil (Nix LSP)...${NC}"
-if sudo emerge --noreplace dev-lang/nil; then
+if qlist -I dev-lang/nil &>/dev/null; then
+  echo -e "${GREEN}✓ nil already installed${NC}"
+elif sudo emerge --noreplace dev-lang/nil; then
   echo -e "${GREEN}✓ nil installed${NC}"
 else
   echo -e "${YELLOW}Warning: nil not available in main repos${NC}"
@@ -235,8 +272,8 @@ echo -e "${BLUE}Step 10: Optional - Build hyprls from source${NC}"
 read -p "Build hyprls from source? (y/n) " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-  echo -e "${BLUE}Installing hyprls build dependencies...${NC}"
-  sudo emerge --noreplace \
+echo -e "${BLUE}Installing hyprls build dependencies...${NC}"
+  check_and_install_packages \
     dev-util/cmake \
     dev-util/meson \
     dev-libs/wayland \
