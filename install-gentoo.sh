@@ -121,7 +121,7 @@ sudo emerge --noreplace \
   sys-apps/fd \
   net-misc/curl \
   sys-devel/gcc \
-  /pkg-config
+  dev-ruby/pkg-config
 
 echo -e "${BLUE}Step 3: Installing language servers and development tools...${NC}"
 sudo emerge --noreplace \
