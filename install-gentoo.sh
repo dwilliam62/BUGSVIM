@@ -116,13 +116,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 check_and_install_packages() {
   local packages=("$@")
   local to_install=()
-  
+
   for pkg in "${packages[@]}"; do
     if ! qlist -I "$pkg" &>/dev/null; then
       to_install+=("$pkg")
     fi
   done
-  
+
   if [ ${#to_install[@]} -gt 0 ]; then
     echo -e "${BLUE}Installing missing packages: ${to_install[*]}${NC}"
     sudo emerge --noreplace "${to_install[@]}"
@@ -272,9 +272,9 @@ echo -e "${BLUE}Step 10: Optional - Build hyprls from source${NC}"
 read -p "Build hyprls from source? (y/n) " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-echo -e "${BLUE}Installing hyprls build dependencies...${NC}"
+  echo -e "${BLUE}Installing hyprls build dependencies...${NC}"
   check_and_install_packages \
-    dev-util/cmake \
+    dev-build/cmake \
     dev-util/meson \
     dev-libs/wayland \
     x11-libs/xcb-util || true
