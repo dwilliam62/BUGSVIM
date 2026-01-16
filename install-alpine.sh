@@ -97,10 +97,11 @@ fi
 # Check NeoVim version (if installed)
 echo -e "${BLUE}Checking NeoVim version...${NC}"
 if command -v nvim >/dev/null 2>&1; then
-  NVIM_VERSION=$(nvim --version | head -1 | grep -oP 'NVIM v\K[^\s]+')
+  # BusyBox grep on Alpine lacks -P; use awk/sed for compatibility
+  NVIM_VERSION=$(nvim --version | head -n1 | awk '{print $2}' | sed 's/^v//')
   echo -e "${GREEN}✓ NeoVim version: $NVIM_VERSION${NC}"
-  MAJOR=$(echo "$NVIM_VERSION" | cut -d. -f1)
-  MINOR=$(echo "$NVIM_VERSION" | cut -d. -f2)
+  MAJOR=$(printf '%s' "$NVIM_VERSION" | cut -d. -f1)
+  MINOR=$(printf '%s' "$NVIM_VERSION" | cut -d. -f2)
   if [ "$MAJOR" -lt 0 ] || { [ "$MAJOR" -eq 0 ] && [ "$MINOR" -lt 10 ]; }; then
     echo -e "${YELLOW}⚠ NeoVim 0.10+ is recommended for this config${NC}"
     echo -e "${YELLOW}You can try newer packages from your Alpine branch (main/community/edge).${NC}"
