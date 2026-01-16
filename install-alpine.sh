@@ -275,7 +275,7 @@ case "$CURRENT_SHELL" in
     NPM_PATH_LINE="export PATH=\"$HOME/.npm-global/bin:\$PATH\""
     echo -e "${YELLOW}Note: Detected shell '$CURRENT_SHELL' - using $SHELL_CONFIG${NC}"
     ;;
-fi
+esac
 
 if [ -f "$SHELL_CONFIG" ]; then
   if ! grep -q "npm-global" "$SHELL_CONFIG"; then
