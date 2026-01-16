@@ -5,7 +5,12 @@
 
 ---
 
-# 🚀 **Current Release - v1.0.2**
+# 🚀 **Current Release - v1.0.3**
+
+#### 📅 **Updated: January 16th, 2026**
+
+- Added:
+  - Install script for Alpine linux
 
 #### 📅 **Updated: December 23st, 2025**
 
