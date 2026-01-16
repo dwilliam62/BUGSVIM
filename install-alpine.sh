@@ -190,17 +190,37 @@ else
 fi
 
 echo -e "${BLUE}Step 7: Installing Python packages (ruff, pyright)...${NC}"
-PYTHON_INSTALLED=0
-if command -v pip3 >/dev/null 2>&1; then
-  pip3 install --user ruff pyright 2>/dev/null && PYTHON_INSTALLED=1 || true
+# Prefer distro packages when available (avoids build/toolchain issues)
+run_as_root apk add --no-interactive py3-ruff py3-pyright || true
+
+# ruff
+if ! command -v ruff >/dev/null 2>&1; then
+  if command -v pip3 >/dev/null 2>&1; then
+    pip3 install --user ruff 2>/dev/null || true
+  elif command -v python3 >/dev/null 2>&1; then
+    python3 -m ensurepip --user 2>/dev/null || true
+    python3 -m pip install --user ruff 2>/dev/null || true
+  fi
 fi
-if [ $PYTHON_INSTALLED -eq 0 ] && command -v python3 >/dev/null 2>&1; then
-  python3 -m ensurepip --user 2>/dev/null || true
-  python3 -m pip install --user ruff pyright 2>/dev/null && PYTHON_INSTALLED=1 || true
+if ! command -v ruff >/dev/null 2>&1; then
+  FAILED_PYTHON+=("ruff")
 fi
-if [ $PYTHON_INSTALLED -eq 0 ]; then
-  FAILED_PYTHON+=("ruff" "pyright")
-  echo -e "${YELLOW}Warning: Python packages install failed${NC}"
+
+# pyright (language server binary is pyright-langserver)
+if ! command -v pyright-langserver >/dev/null 2>&1; then
+  if command -v pip3 >/dev/null 2>&1; then
+    pip3 install --user pyright 2>/dev/null || true
+  elif command -v python3 >/dev/null 2>&1; then
+    python3 -m ensurepip --user 2>/dev/null || true
+    python3 -m pip install --user pyright 2>/dev/null || true
+  fi
+fi
+if ! command -v pyright-langserver >/dev/null 2>&1; then
+  FAILED_PYTHON+=("pyright")
+fi
+
+if [ ${#FAILED_PYTHON[@]} -gt 0 ]; then
+  echo -e "${YELLOW}Warning: Python package installs incomplete: ${FAILED_PYTHON[*]}${NC}"
 fi
 
 # Get the script directory before any cd operations
