@@ -97,14 +97,18 @@ fi
 # Check NeoVim version (if installed)
 echo -e "${BLUE}Checking NeoVim version...${NC}"
 if command -v nvim >/dev/null 2>&1; then
-  # BusyBox grep on Alpine lacks -P; use awk/sed for compatibility
-  NVIM_VERSION=$(nvim --version | head -n1 | awk '{print $2}' | sed 's/^v//')
-  echo -e "${GREEN}✓ NeoVim version: $NVIM_VERSION${NC}"
-  MAJOR=$(printf '%s' "$NVIM_VERSION" | cut -d. -f1)
-  MINOR=$(printf '%s' "$NVIM_VERSION" | cut -d. -f2)
-  if [ "$MAJOR" -lt 0 ] || { [ "$MAJOR" -eq 0 ] && [ "$MINOR" -lt 10 ]; }; then
-    echo -e "${YELLOW}⚠ NeoVim 0.10+ is recommended for this config${NC}"
-    echo -e "${YELLOW}You can try newer packages from your Alpine branch (main/community/edge).${NC}"
+  # Parse version using sed only (works with BusyBox); example input: "NVIM v0.11.5"
+  NVIM_VERSION=$(nvim --version | sed -n '1{s/^NVIM v//;s/ .*//;p}')
+  if [ -n "$NVIM_VERSION" ]; then
+    echo -e "${GREEN}✓ NeoVim version: $NVIM_VERSION${NC}"
+    MAJOR=$(printf '%s' "$NVIM_VERSION" | cut -d. -f1)
+    MINOR=$(printf '%s' "$NVIM_VERSION" | cut -d. -f2)
+    if [ "$MAJOR" -lt 0 ] || { [ "$MAJOR" -eq 0 ] && [ "$MINOR" -lt 10 ]; }; then
+      echo -e "${YELLOW}⚠ NeoVim 0.10+ is recommended for this config${NC}"
+      echo -e "${YELLOW}You can try newer packages from your Alpine branch (main/community/edge).${NC}"
+    fi
+  else
+    echo -e "${YELLOW}Warning: could not parse NeoVim version; continuing...${NC}"
   fi
 else
   echo -e "${YELLOW}NeoVim not found — it will be installed in Step 2.${NC}"
