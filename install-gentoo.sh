@@ -149,16 +149,9 @@ check_and_install_packages \
   dev-lang/lua \
   dev-lang/python \
   net-libs/nodejs \
-  llvm-core/clang
+  # llvm-core/clang  # disabled for now: C/C++ toolchain not needed
 
-# Rust - check before installing to avoid reinstallation
-echo -e "${BLUE}  Checking Rust installation...${NC}"
-if qlist -I dev-lang/rust &>/dev/null; then
-  echo -e "${GREEN}✓ Rust already installed${NC}"
-else
-  echo -e "${BLUE}  Installing Rust...${NC}"
-  sudo emerge --noreplace dev-lang/rust
-fi
+# Rust installation disabled for now (not needed)
 
 echo -e "${BLUE}Step 3b: Setting up npm for global installs...${NC}"
 if ! command -v npm &>/dev/null; then
