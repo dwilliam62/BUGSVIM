@@ -20,6 +20,26 @@ FAILED_NPM=()
 FAILED_PYTHON=()
 FAILED_LUALS=()
 
+FORCE_REINSTALL=0
+
+usage() {
+  cat <<'EOF'
+Usage: install-freebsd.sh [options]
+
+Options:
+  -f, --force    Force rebuild/reinstall of optional packages
+  -h, --help     Show this help message
+EOF
+}
+
+for arg in "$@"; do
+  case "$arg" in
+    -f|--force) FORCE_REINSTALL=1 ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Unknown option: $arg"; usage; exit 1 ;;
+  esac
+done
+
 # ================================================================================================
 # Backup existing NeoVim configuration
 # ================================================================================================
@@ -122,6 +142,10 @@ run_as_root() {
   fi
 }
 
+npm_pkg_installed() {
+  command -v npm >/dev/null 2>&1 && npm list -g "$1" >/dev/null 2>&1
+}
+
 echo -e "${BLUE}Step 1: Updating package manager...${NC}"
 run_as_root pkg update
 
@@ -158,7 +182,11 @@ else
 fi
 
 echo -e "${BLUE}Step 3c: Installing bash-language-server...${NC}"
-npm install -g bash-language-server || echo -e "${YELLOW}Warning: bash-language-server install failed${NC}"
+if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed bash-language-server; then
+  npm install -g bash-language-server || echo -e "${YELLOW}Warning: bash-language-server install failed${NC}"
+else
+  echo -e "${GREEN}✓ bash-language-server already installed${NC}"
+fi
 
 echo -e "${BLUE}Step 4: Installing formatters...${NC}"
 
@@ -169,8 +197,16 @@ echo -e "${BLUE}  Installing clang-format (via clang)...${NC}"
 run_as_root pkg install -y FreeBSD-clang-15.0 || echo -e "${YELLOW}Warning: clang not available${NC}"
 
 echo -e "${BLUE}  Installing stylua and prettier via npm...${NC}"
-npm install -g @johnnymorganz/stylua-bin || echo -e "${YELLOW}Warning: stylua install failed${NC}"
-npm install -g prettier || echo -e "${YELLOW}Warning: prettier install failed${NC}"
+if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed @johnnymorganz/stylua-bin; then
+  npm install -g @johnnymorganz/stylua-bin || echo -e "${YELLOW}Warning: stylua install failed${NC}"
+else
+  echo -e "${GREEN}✓ stylua already installed${NC}"
+fi
+if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed prettier; then
+  npm install -g prettier || echo -e "${YELLOW}Warning: prettier install failed${NC}"
+else
+  echo -e "${GREEN}✓ prettier already installed${NC}"
+fi
 
 echo -e "${BLUE}Step 5: Installing optional convenience tools...${NC}"
 run_as_root pkg install -y \
@@ -180,10 +216,24 @@ run_as_root pkg install -y \
 
 echo -e "${BLUE}Step 6: Installing npm global packages...${NC}"
 if command -v npm &> /dev/null; then
-  npm install -g @fsouza/prettierd vscode-langservers-extracted neovim || {
-    FAILED_NPM+=("@fsouza/prettierd" "vscode-langservers-extracted" "neovim")
+  if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed @fsouza/prettierd; then
+    npm install -g @fsouza/prettierd || FAILED_NPM+=("@fsouza/prettierd")
+  else
+    echo -e "${GREEN}✓ @fsouza/prettierd already installed${NC}"
+  fi
+  if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed vscode-langservers-extracted; then
+    npm install -g vscode-langservers-extracted || FAILED_NPM+=("vscode-langservers-extracted")
+  else
+    echo -e "${GREEN}✓ vscode-langservers-extracted already installed${NC}"
+  fi
+  if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed neovim; then
+    npm install -g neovim || FAILED_NPM+=("neovim")
+  else
+    echo -e "${GREEN}✓ neovim (npm) already installed${NC}"
+  fi
+  if [ ${#FAILED_NPM[@]} -gt 0 ]; then
     echo -e "${YELLOW}Warning: npm packages install failed${NC}"
-  }
+  fi
 else
   echo -e "${RED}✗${NC} npm not available - skipping npm global packages"
   FAILED_NPM+=("@fsouza/prettierd" "vscode-langservers-extracted" "neovim")
@@ -192,8 +242,9 @@ fi
 echo -e "${BLUE}Step 7: Installing Python packages...${NC}"
 # Use py39 specifically since we installed that version
 PYTHON_INSTALLED=0
-
-if command -v py39-pip &> /dev/null; then
+if [ "$FORCE_REINSTALL" -ne 1 ] && command -v ruff >/dev/null 2>&1 && command -v pyright >/dev/null 2>&1; then
+  PYTHON_INSTALLED=1
+elif command -v py39-pip &> /dev/null; then
   py39-pip install --user ruff pyright 2>/dev/null && PYTHON_INSTALLED=1
 fi
 

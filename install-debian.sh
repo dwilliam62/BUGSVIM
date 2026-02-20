@@ -20,6 +20,26 @@ FAILED_NPM=()
 FAILED_PYTHON=()
 FAILED_HYPRLS=()
 
+FORCE_REINSTALL=0
+
+usage() {
+  cat <<'EOF'
+Usage: install-debian.sh [options]
+
+Options:
+  -f, --force    Force rebuild/reinstall of optional packages
+  -h, --help     Show this help message
+EOF
+}
+
+for arg in "$@"; do
+  case "$arg" in
+    -f|--force) FORCE_REINSTALL=1 ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Unknown option: $arg"; usage; exit 1 ;;
+  esac
+done
+
 # ================================================================================================
 # hyprls helpers
 # ================================================================================================
@@ -29,6 +49,10 @@ hyprls_installed() {
 
 hyprls_version() {
   hyprls --version 2>/dev/null | head -1
+}
+
+npm_pkg_installed() {
+  command -v npm >/dev/null 2>&1 && npm list -g "$1" >/dev/null 2>&1
 }
 
 # ================================================================================================
@@ -171,7 +195,11 @@ echo -e "${YELLOW}Note: lua-language-server must be installed separately${NC}"
 echo -e "${YELLOW}Install from: https://github.com/LuaLS/lua-language-server/releases${NC}"
 
 echo -e "${BLUE}  Installing bash-language-server...${NC}"
-npm install -g bash-language-server || echo -e "${YELLOW}Warning: bash-language-server install failed${NC}"
+if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed bash-language-server; then
+  npm install -g bash-language-server || echo -e "${YELLOW}Warning: bash-language-server install failed${NC}"
+else
+  echo -e "${GREEN}✓ bash-language-server already installed${NC}"
+fi
 
 echo -e "${BLUE}Step 4: Installing formatters...${NC}"
 # Install formatters that are available
@@ -183,10 +211,18 @@ sudo apt-get install -y clang-format || echo -e "${YELLOW}Warning: clang-format 
 
 # stylua and prettier install via npm
 echo -e "${BLUE}  Installing stylua (Lua formatter)...${NC}"
-npm install -g @johnnymorganz/stylua-bin || echo -e "${YELLOW}Warning: stylua install failed${NC}"
+if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed @johnnymorganz/stylua-bin; then
+  npm install -g @johnnymorganz/stylua-bin || echo -e "${YELLOW}Warning: stylua install failed${NC}"
+else
+  echo -e "${GREEN}✓ stylua already installed${NC}"
+fi
 
 echo -e "${BLUE}  Installing prettier (Web formatter)...${NC}"
-npm install -g prettier || echo -e "${YELLOW}Warning: prettier install failed${NC}"
+if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed prettier; then
+  npm install -g prettier || echo -e "${YELLOW}Warning: prettier install failed${NC}"
+else
+  echo -e "${GREEN}✓ prettier already installed${NC}"
+fi
 
 echo -e "${BLUE}Step 5: Installing optional convenience tools...${NC}"
 sudo apt-get install -y \
@@ -197,10 +233,18 @@ sudo apt-get install -y \
 echo -e "${BLUE}Step 6: Installing npm global packages...${NC}"
 if command -v npm &>/dev/null; then
   echo -e "${BLUE}  Installing prettierd...${NC}"
-  npm install -g @fsouza/prettierd || FAILED_NPM+=("@fsouza/prettierd")
+  if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed @fsouza/prettierd; then
+    npm install -g @fsouza/prettierd || FAILED_NPM+=("@fsouza/prettierd")
+  else
+    echo -e "${GREEN}✓ @fsouza/prettierd already installed${NC}"
+  fi
 
   echo -e "${BLUE}  Installing vscode-langservers...${NC}"
-  npm install -g vscode-langservers-extracted || FAILED_NPM+=("vscode-langservers-extracted")
+  if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed vscode-langservers-extracted; then
+    npm install -g vscode-langservers-extracted || FAILED_NPM+=("vscode-langservers-extracted")
+  else
+    echo -e "${GREEN}✓ vscode-langservers-extracted already installed${NC}"
+  fi
 else
   echo -e "${RED}✗${NC} npm not available - skipping npm global packages"
   FAILED_NPM+=("@fsouza/prettierd" "vscode-langservers-extracted")
@@ -209,7 +253,9 @@ fi
 echo -e "${BLUE}Step 7: Installing Python packages...${NC}"
 # Ubuntu/Debian enforces PEP 668, use --break-system-packages for user installs
 PYTHON_INSTALLED=0
-
+if [ "$FORCE_REINSTALL" -ne 1 ] && command -v ruff >/dev/null 2>&1 && command -v pyright >/dev/null 2>&1; then
+  PYTHON_INSTALLED=1
+elif command -v pip3 &>/dev/null; then
 if command -v pip3 &>/dev/null; then
   pip3 install --user --break-system-packages ruff pyright 2>/dev/null && PYTHON_INSTALLED=1
 fi
@@ -225,7 +271,8 @@ if [ $PYTHON_INSTALLED -eq 0 ]; then
 fi
 
 echo -e "${BLUE}Step 8: Optional - Build hyprls from source${NC}"
-if hyprls_installed; then
+REPLY="n"
+if [ "$FORCE_REINSTALL" -ne 1 ] && hyprls_installed; then
   echo -e "${GREEN}✓ hyprls already installed${NC}"
   HYPRLS_VER=$(hyprls_version)
   [ -n "$HYPRLS_VER" ] && echo -e "${GREEN}  Version: ${HYPRLS_VER}${NC}"
@@ -233,7 +280,7 @@ else
   read -p "Build hyprls from source? (y/n) " -n 1 -r
   echo
 fi
-if ! hyprls_installed && [[ $REPLY =~ ^[Yy]$ ]]; then
+if [[ $REPLY =~ ^[Yy]$ ]] && { [ "$FORCE_REINSTALL" -eq 1 ] || ! hyprls_installed; }; then
   echo -e "${BLUE}Installing hyprls build dependencies...${NC}"
   sudo apt-get install -y cmake meson wayland-protocols libwayland-dev libxcb-render0-dev libxcb-shape0-dev || true
 

@@ -20,6 +20,26 @@ FAILED_NPM=()
 FAILED_PYTHON=()
 FAILED_AUR=()
 
+FORCE_REINSTALL=0
+
+usage() {
+    cat <<'EOF'
+Usage: install-arch.sh [options]
+
+Options:
+  -f, --force    Force rebuild/reinstall of optional packages
+  -h, --help     Show this help message
+EOF
+}
+
+for arg in "$@"; do
+    case "$arg" in
+        -f|--force) FORCE_REINSTALL=1 ;;
+        -h|--help) usage; exit 0 ;;
+        *) echo "Unknown option: $arg"; usage; exit 1 ;;
+    esac
+done
+
 # ================================================================================================
 # hyprls helpers
 # ================================================================================================
@@ -29,6 +49,10 @@ hyprls_installed() {
 
 hyprls_version() {
     hyprls --version 2>/dev/null | head -1
+}
+
+npm_pkg_installed() {
+    command -v npm >/dev/null 2>&1 && npm list -g "$1" >/dev/null 2>&1
 }
 
 # ================================================================================================
@@ -181,10 +205,24 @@ fi
 
 echo -e "${BLUE}Step 6: Installing npm global packages...${NC}"
 if command -v npm &> /dev/null; then
-    npm install -g @fsouza/prettierd vscode-langservers-extracted neovim || {
-        FAILED_NPM+=("@fsouza/prettierd" "vscode-langservers-extracted" "neovim")
+    if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed @fsouza/prettierd; then
+        npm install -g @fsouza/prettierd || FAILED_NPM+=("@fsouza/prettierd")
+    else
+        echo -e "${GREEN}✓ @fsouza/prettierd already installed${NC}"
+    fi
+    if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed vscode-langservers-extracted; then
+        npm install -g vscode-langservers-extracted || FAILED_NPM+=("vscode-langservers-extracted")
+    else
+        echo -e "${GREEN}✓ vscode-langservers-extracted already installed${NC}"
+    fi
+    if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed neovim; then
+        npm install -g neovim || FAILED_NPM+=("neovim")
+    else
+        echo -e "${GREEN}✓ neovim (npm) already installed${NC}"
+    fi
+    if [ ${#FAILED_NPM[@]} -gt 0 ]; then
         echo -e "${YELLOW}Warning: npm package installation failed${NC}"
-    }
+    fi
 else
     echo -e "${RED}✗${NC} npm not available - skipping npm global packages"
     FAILED_NPM+=("@fsouza/prettierd" "vscode-langservers-extracted" "neovim")
@@ -200,30 +238,38 @@ echo -e "${BLUE}Step 7: Checking for AUR helper...${NC}"
 if command -v yay &> /dev/null; then
     echo -e "${GREEN}✓ yay found${NC}"
     echo -e "${BLUE}Step 8: Installing AUR packages (recommended)...${NC}"
+    AUR_ARGS=(--noconfirm)
+    if [ "$FORCE_REINSTALL" -ne 1 ]; then
+        AUR_ARGS+=(--needed)
+    fi
     AUR_PKGS=(alejandra-bin prettierd)
-    if hyprls_installed; then
+    if [ "$FORCE_REINSTALL" -ne 1 ] && hyprls_installed; then
         echo -e "${GREEN}✓ hyprls already installed${NC}"
         HYPRLS_VER=$(hyprls_version)
         [ -n "$HYPRLS_VER" ] && echo -e "${GREEN}  Version: ${HYPRLS_VER}${NC}"
     else
         AUR_PKGS=(hyprls "${AUR_PKGS[@]}")
     fi
-    yay -S --noconfirm "${AUR_PKGS[@]}" || {
+    yay -S "${AUR_ARGS[@]}" "${AUR_PKGS[@]}" || {
         FAILED_AUR+=("${AUR_PKGS[@]}")
         echo -e "${YELLOW}Warning: Some AUR packages failed to install${NC}"
     }
 elif command -v paru &> /dev/null; then
     echo -e "${GREEN}✓ paru found${NC}"
     echo -e "${BLUE}Step 8: Installing AUR packages (recommended)...${NC}"
+    AUR_ARGS=(--noconfirm)
+    if [ "$FORCE_REINSTALL" -ne 1 ]; then
+        AUR_ARGS+=(--needed)
+    fi
     AUR_PKGS=(alejandra-bin prettierd)
-    if hyprls_installed; then
+    if [ "$FORCE_REINSTALL" -ne 1 ] && hyprls_installed; then
         echo -e "${GREEN}✓ hyprls already installed${NC}"
         HYPRLS_VER=$(hyprls_version)
         [ -n "$HYPRLS_VER" ] && echo -e "${GREEN}  Version: ${HYPRLS_VER}${NC}"
     else
         AUR_PKGS=(hyprls "${AUR_PKGS[@]}")
     fi
-    paru -S --noconfirm "${AUR_PKGS[@]}" || {
+    paru -S "${AUR_ARGS[@]}" "${AUR_PKGS[@]}" || {
         FAILED_AUR+=("${AUR_PKGS[@]}")
         echo -e "${YELLOW}Warning: Some AUR packages failed to install${NC}"
     }

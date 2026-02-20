@@ -20,6 +20,26 @@ FAILED_NPM=()
 FAILED_PYTHON=()
 FAILED_BUILD=()
 
+FORCE_REINSTALL=0
+
+usage() {
+  cat <<'EOF'
+Usage: install-gentoo.sh [options]
+
+Options:
+  -f, --force    Force rebuild/reinstall of optional packages
+  -h, --help     Show this help message
+EOF
+}
+
+for arg in "$@"; do
+  case "$arg" in
+    -f|--force) FORCE_REINSTALL=1 ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Unknown option: $arg"; usage; exit 1 ;;
+  esac
+done
+
 # ================================================================================================
 # hyprls helpers
 # ================================================================================================
@@ -29,6 +49,10 @@ hyprls_installed() {
 
 hyprls_version() {
   hyprls --version 2>/dev/null | head -1
+}
+
+npm_pkg_installed() {
+  command -v npm >/dev/null 2>&1 && npm list -g "$1" >/dev/null 2>&1
 }
 
 # ================================================================================================
@@ -196,7 +220,11 @@ elif sudo emerge --noreplace app-shells/shfmt; then
   echo -e "${GREEN}✓ shfmt installed${NC}"
 else
   echo -e "${YELLOW}Warning: shfmt not available - will install via npm${NC}"
-  npm install -g shfmt || FAILED_NPM+=("shfmt")
+  if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed shfmt; then
+    npm install -g shfmt || FAILED_NPM+=("shfmt")
+  else
+    echo -e "${GREEN}✓ shfmt already installed${NC}"
+  fi
 fi
 
 # clang-format - included with clang
@@ -209,7 +237,11 @@ fi
 
 # prettier - install via npm
 echo -e "${BLUE}  Installing prettier (Web formatter)...${NC}"
-npm install -g prettier || FAILED_NPM+=("prettier")
+if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed prettier; then
+  npm install -g prettier || FAILED_NPM+=("prettier")
+else
+  echo -e "${GREEN}✓ prettier already installed${NC}"
+fi
 
 echo -e "${BLUE}Step 5: Installing optional convenience tools...${NC}"
 check_and_install_packages \
@@ -220,13 +252,25 @@ check_and_install_packages \
 echo -e "${BLUE}Step 6: Installing npm global packages...${NC}"
 if command -v npm &>/dev/null; then
   echo -e "${BLUE}  Installing prettierd (Prettier daemon)...${NC}"
-  npm install -g @fsouza/prettierd || FAILED_NPM+=("@fsouza/prettierd")
+  if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed @fsouza/prettierd; then
+    npm install -g @fsouza/prettierd || FAILED_NPM+=("@fsouza/prettierd")
+  else
+    echo -e "${GREEN}✓ @fsouza/prettierd already installed${NC}"
+  fi
 
   echo -e "${BLUE}  Installing vscode-langservers...${NC}"
-  npm install -g vscode-langservers-extracted || FAILED_NPM+=("vscode-langservers-extracted")
+  if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed vscode-langservers-extracted; then
+    npm install -g vscode-langservers-extracted || FAILED_NPM+=("vscode-langservers-extracted")
+  else
+    echo -e "${GREEN}✓ vscode-langservers-extracted already installed${NC}"
+  fi
 
   echo -e "${BLUE}  Installing bash-language-server...${NC}"
-  npm install -g bash-language-server || FAILED_NPM+=("bash-language-server")
+  if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed bash-language-server; then
+    npm install -g bash-language-server || FAILED_NPM+=("bash-language-server")
+  else
+    echo -e "${GREEN}✓ bash-language-server already installed${NC}"
+  fi
 else
   echo -e "${RED}✗${NC} npm not available - skipping npm global packages"
   FAILED_NPM+=("@fsouza/prettierd" "vscode-langservers-extracted" "bash-language-server")
@@ -234,8 +278,9 @@ fi
 
 echo -e "${BLUE}Step 7: Installing Python packages (ruff, pyright)...${NC}"
 PYTHON_INSTALLED=0
-
-if command -v pip3 &>/dev/null; then
+if [ "$FORCE_REINSTALL" -ne 1 ] && command -v ruff >/dev/null 2>&1 && command -v pyright >/dev/null 2>&1; then
+  PYTHON_INSTALLED=1
+elif command -v pip3 &>/dev/null; then
   pip3 install --user ruff pyright 2>/dev/null && PYTHON_INSTALLED=1
 fi
 
@@ -273,7 +318,8 @@ else
 fi
 
 echo -e "${BLUE}Step 10: Optional - Build hyprls from source${NC}"
-if hyprls_installed; then
+REPLY="n"
+if [ "$FORCE_REINSTALL" -ne 1 ] && hyprls_installed; then
   echo -e "${GREEN}✓ hyprls already installed${NC}"
   HYPRLS_VER=$(hyprls_version)
   [ -n "$HYPRLS_VER" ] && echo -e "${GREEN}  Version: ${HYPRLS_VER}${NC}"
@@ -281,7 +327,7 @@ else
   read -p "Build hyprls from source? (y/n) " -n 1 -r
   echo
 fi
-if ! hyprls_installed && [[ $REPLY =~ ^[Yy]$ ]]; then
+if [[ $REPLY =~ ^[Yy]$ ]] && { [ "$FORCE_REINSTALL" -eq 1 ] || ! hyprls_installed; }; then
   echo -e "${BLUE}Installing hyprls build dependencies...${NC}"
   check_and_install_packages \
     dev-build/cmake \

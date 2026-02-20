@@ -20,6 +20,26 @@ FAILED_PACKAGES=()
 FAILED_NPM=()
 FAILED_PYTHON=()
 
+FORCE_REINSTALL=0
+
+usage() {
+  cat <<'EOF'
+Usage: install-alpine.sh [options]
+
+Options:
+  -f, --force    Force rebuild/reinstall of optional packages
+  -h, --help     Show this help message
+EOF
+}
+
+for arg in "$@"; do
+  case "$arg" in
+    -f|--force) FORCE_REINSTALL=1 ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Unknown option: $arg"; usage; exit 1 ;;
+  esac
+done
+
 # ================================================================================================
 # run_as_root — prefer doas, fall back to sudo, or direct if already root
 # ================================================================================================
@@ -34,6 +54,10 @@ run_as_root() {
     echo -e "${RED}Error: This script requires root privileges via doas (preferred) or sudo.${NC}"
     exit 1
   fi
+}
+
+npm_pkg_installed() {
+  command -v npm >/dev/null 2>&1 && npm list -g "$1" >/dev/null 2>&1
 }
 
 # ================================================================================================
@@ -162,7 +186,11 @@ fi
 
 echo -e "${BLUE}Step 3d: Installing bash-language-server (npm)...${NC}"
 if command -v npm >/dev/null 2>&1; then
-  npm install -g bash-language-server || FAILED_NPM+=("bash-language-server")
+  if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed bash-language-server; then
+    npm install -g bash-language-server || FAILED_NPM+=("bash-language-server")
+  else
+    echo -e "${GREEN}✓ bash-language-server already installed${NC}"
+  fi
 else
   echo -e "${YELLOW}Skipping bash-language-server (npm not available)${NC}"
   FAILED_NPM+=("bash-language-server")
@@ -172,7 +200,11 @@ echo -e "${BLUE}Step 4: Installing formatters...${NC}"
 # shfmt and stylua via apk; prettier via npm
 run_as_root apk add --no-interactive shfmt stylua || FAILED_PACKAGES+=("shfmt/stylua")
 if command -v npm >/dev/null 2>&1; then
-  npm install -g prettier || FAILED_NPM+=("prettier")
+  if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed prettier; then
+    npm install -g prettier || FAILED_NPM+=("prettier")
+  else
+    echo -e "${GREEN}✓ prettier already installed${NC}"
+  fi
 fi
 
 echo -e "${BLUE}Step 5: Installing optional convenience tools...${NC}"
@@ -180,10 +212,24 @@ run_as_root apk add --no-interactive lazygit bat wl-clipboard || true
 
 echo -e "${BLUE}Step 6: Installing npm global packages...${NC}"
 if command -v npm >/dev/null 2>&1; then
-  npm install -g @fsouza/prettierd vscode-langservers-extracted neovim || {
-    FAILED_NPM+=("@fsouza/prettierd" "vscode-langservers-extracted" "neovim")
+  if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed @fsouza/prettierd; then
+    npm install -g @fsouza/prettierd || FAILED_NPM+=("@fsouza/prettierd")
+  else
+    echo -e "${GREEN}✓ @fsouza/prettierd already installed${NC}"
+  fi
+  if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed vscode-langservers-extracted; then
+    npm install -g vscode-langservers-extracted || FAILED_NPM+=("vscode-langservers-extracted")
+  else
+    echo -e "${GREEN}✓ vscode-langservers-extracted already installed${NC}"
+  fi
+  if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed neovim; then
+    npm install -g neovim || FAILED_NPM+=("neovim")
+  else
+    echo -e "${GREEN}✓ neovim (npm) already installed${NC}"
+  fi
+  if [ ${#FAILED_NPM[@]} -gt 0 ]; then
     echo -e "${YELLOW}Warning: npm package installation failed${NC}"
-  }
+  fi
 else
   echo -e "${RED}✗${NC} npm not available - skipping npm global packages"
   FAILED_NPM+=("@fsouza/prettierd" "vscode-langservers-extracted" "neovim")
@@ -194,7 +240,7 @@ echo -e "${BLUE}Step 7: Installing Python packages (ruff, pyright)...${NC}"
 run_as_root apk add --no-interactive py3-ruff py3-pyright || true
 
 # ruff
-if ! command -v ruff >/dev/null 2>&1; then
+if [ "$FORCE_REINSTALL" -eq 1 ] || ! command -v ruff >/dev/null 2>&1; then
   if command -v pip3 >/dev/null 2>&1; then
     pip3 install --user ruff 2>/dev/null || true
   elif command -v python3 >/dev/null 2>&1; then
@@ -207,7 +253,7 @@ if ! command -v ruff >/dev/null 2>&1; then
 fi
 
 # pyright (language server binary is pyright-langserver)
-if ! command -v pyright-langserver >/dev/null 2>&1; then
+if [ "$FORCE_REINSTALL" -eq 1 ] || ! command -v pyright-langserver >/dev/null 2>&1; then
   if command -v pip3 >/dev/null 2>&1; then
     pip3 install --user pyright 2>/dev/null || true
   elif command -v python3 >/dev/null 2>&1; then
