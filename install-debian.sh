@@ -81,7 +81,7 @@ build_hyprls() {
     # aquamarine (Hyprland dependency) - package name may vary by distro
     sudo apt-get install -y libaquamarine-dev || true
 
-    if ! pkg-config --exists 'aquamarine>=0.9.3' 2>/dev/null; then
+    if ! pkg-config --atleast-version=0.9.3 aquamarine 2>/dev/null; then
       echo -e "${YELLOW}⚠ aquamarine>=0.9.3 not found via pkg-config; skipping hyprls build${NC}"
       echo -e "${YELLOW}Install the aquamarine development package for your distro, then re-run with --force${NC}"
       FAILED_HYPRLS+=("hyprls")
