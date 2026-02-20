@@ -78,7 +78,7 @@ build_hyprls() {
   if [[ $REPLY =~ ^[Yy]$ ]] && { [ "$FORCE_REINSTALL" -eq 1 ] || ! hyprls_installed; }; then
     echo -e "${BLUE}Installing hyprls build dependencies...${NC}"
     sudo apt-get install -y cmake meson wayland-protocols libwayland-dev libxcb-render0-dev libxcb-shape0-dev || true
-    sudo apt-get install -y libudis86-dev libhyprland-dev libhyprcursor-dev libhyprutils-dev libhyprgraphics-dev libre2-dev libmuparser-dev libxcb-errors-dev || true
+    sudo apt-get install -y libudis86-dev libhyprland-dev libhyprcursor-dev libhyprutils-dev libhyprgraphics-dev libre2-dev libmuparser-dev libxcb-errors-dev libhyprwire-dev || true
     # aquamarine (Hyprland dependency) - package name may vary by distro
     sudo apt-get install -y libaquamarine-dev || true
 
@@ -107,14 +107,15 @@ build_hyprls() {
     echo -e "${BLUE}Cloning hyprland repository...${NC}"
     (cd /tmp && git clone --depth 1 https://github.com/hyprwm/hyprland.git)
     echo -e "${BLUE}Building hyprls...${NC}"
-    if (cd /tmp/hyprland && cmake -B build && cmake --build build --target hyprls 2>/dev/null); then
+    if (cd /tmp/hyprland && cmake -B build && cmake --build build --target hyprls 2>&1 | tee /tmp/hyprland/build/hyprls-build.log); then
       echo -e "${BLUE}Installing hyprls...${NC}"
       sudo cp /tmp/hyprland/build/hyprls /usr/local/bin/ 2>/dev/null || sudo install -m 755 /tmp/hyprland/build/hyprls /usr/local/bin/
       echo -e "${GREEN}✓ hyprls installed${NC}"
     else
       echo -e "${YELLOW}⚠ hyprls build failed (check dependencies)${NC}"
       FAILED_HYPRLS+=("hyprls")
-      echo "  Install build dependencies: cmake, meson, wayland-protocols, libwayland-dev, libudis86-dev, libaquamarine-dev, hyprlang-dev"
+      echo "  Install build dependencies: cmake, meson, wayland-protocols, libwayland-dev, libudis86-dev, libaquamarine-dev, libhyprlang-dev, libhyprland-dev, libhyprcursor-dev, libhyprutils-dev, libhyprgraphics-dev, libhyprwire-dev, libre2-dev, libmuparser-dev, libxcb-errors-dev"
+      echo "  Build log: /tmp/hyprland/build/hyprls-build.log"
     fi
   else
     echo -e "${YELLOW}Skipping hyprls build${NC}"
