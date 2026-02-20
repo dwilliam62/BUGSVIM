@@ -77,45 +77,26 @@ build_hyprls() {
 
   if [[ $REPLY =~ ^[Yy]$ ]] && { [ "$FORCE_REINSTALL" -eq 1 ] || ! hyprls_installed; }; then
     echo -e "${BLUE}Installing hyprls build dependencies...${NC}"
-    sudo apt-get install -y cmake meson wayland-protocols libwayland-dev libxcb-render0-dev libxcb-shape0-dev || true
-    sudo apt-get install -y libudis86-dev libhyprland-dev libhyprcursor-dev libhyprutils-dev libhyprgraphics-dev libre2-dev libmuparser-dev libxcb-errors-dev libhyprwire-dev || true
-    # aquamarine (Hyprland dependency) - package name may vary by distro
-    sudo apt-get install -y libaquamarine-dev || true
+    sudo apt-get install -y golang-go || true
 
-    if ! pkg-config --atleast-version=0.9.3 aquamarine 2>/dev/null; then
-      echo -e "${YELLOW}⚠ aquamarine>=0.9.3 not found via pkg-config; skipping hyprls build${NC}"
-      echo -e "${YELLOW}Install the aquamarine development package for your distro, then re-run with --force${NC}"
+    if ! command -v go >/dev/null 2>&1; then
+      echo -e "${YELLOW}⚠ Go not found; cannot install hyprls${NC}"
       FAILED_HYPRLS+=("hyprls")
-      echo -e "${YELLOW}Note: hyprls is optional; only needed for Hyprland configs${NC}"
-      echo ""
       return 0
     fi
 
-    # hyprlang (Hyprland dependency)
-    if ! pkg-config --atleast-version=0.6.7 hyprlang 2>/dev/null; then
-      echo -e "${YELLOW}⚠ hyprlang>=0.6.7 not found via pkg-config; skipping hyprls build${NC}"
-      echo -e "${YELLOW}Install the hyprlang development package for your distro, then re-run with --force${NC}"
-      FAILED_HYPRLS+=("hyprls")
-      echo -e "${YELLOW}Note: hyprls is optional; only needed for Hyprland configs${NC}"
-      echo ""
-      return 0
-    fi
-
-    if [ -d /tmp/hyprland ]; then
-      rm -rf /tmp/hyprland
-    fi
-    echo -e "${BLUE}Cloning hyprland repository...${NC}"
-    (cd /tmp && git clone --depth 1 https://github.com/hyprwm/hyprland.git)
-    echo -e "${BLUE}Building hyprls...${NC}"
-    if (cd /tmp/hyprland && cmake -B build && cmake --build build --target hyprls 2>&1 | tee /tmp/hyprland/build/hyprls-build.log); then
-      echo -e "${BLUE}Installing hyprls...${NC}"
-      sudo cp /tmp/hyprland/build/hyprls /usr/local/bin/ 2>/dev/null || sudo install -m 755 /tmp/hyprland/build/hyprls /usr/local/bin/
-      echo -e "${GREEN}✓ hyprls installed${NC}"
+    mkdir -p "$HOME/.local/bin"
+    echo -e "${BLUE}Installing hyprls via go install...${NC}"
+    if GOBIN="$HOME/.local/bin" go install github.com/hyprland-community/hyprls/cmd/hyprls@latest 2>&1 | tee /tmp/hyprls-build.log; then
+      echo -e "${GREEN}✓ hyprls installed to $HOME/.local/bin${NC}"
     else
-      echo -e "${YELLOW}⚠ hyprls build failed (check dependencies)${NC}"
+      echo -e "${YELLOW}⚠ hyprls install failed${NC}"
       FAILED_HYPRLS+=("hyprls")
-      echo "  Install build dependencies: cmake, meson, wayland-protocols, libwayland-dev, libudis86-dev, libaquamarine-dev, libhyprlang-dev, libhyprland-dev, libhyprcursor-dev, libhyprutils-dev, libhyprgraphics-dev, libhyprwire-dev, libre2-dev, libmuparser-dev, libxcb-errors-dev"
-      echo "  Build log: /tmp/hyprland/build/hyprls-build.log"
+      echo "  Build log: /tmp/hyprls-build.log"
+    fi
+
+    if ! command -v hyprls >/dev/null 2>&1; then
+      echo -e "${YELLOW}Note: add ~/.local/bin to PATH to use hyprls${NC}"
     fi
   else
     echo -e "${YELLOW}Skipping hyprls build${NC}"
