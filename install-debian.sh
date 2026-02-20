@@ -256,7 +256,6 @@ PYTHON_INSTALLED=0
 if [ "$FORCE_REINSTALL" -ne 1 ] && command -v ruff >/dev/null 2>&1 && command -v pyright >/dev/null 2>&1; then
   PYTHON_INSTALLED=1
 elif command -v pip3 &>/dev/null; then
-if command -v pip3 &>/dev/null; then
   pip3 install --user --break-system-packages ruff pyright 2>/dev/null && PYTHON_INSTALLED=1
 fi
 
