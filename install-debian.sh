@@ -21,6 +21,7 @@ FAILED_PYTHON=()
 FAILED_HYPRLS=()
 
 FORCE_REINSTALL=0
+HYPRLS_ONLY=0
 
 usage() {
   cat <<'EOF'
@@ -28,6 +29,7 @@ Usage: install-debian.sh [options]
 
 Options:
   -f, --force    Force rebuild/reinstall of optional packages
+  --hyprls-only  Only build/install hyprls (skip full install)
   -h, --help     Show this help message
 EOF
 }
@@ -35,6 +37,7 @@ EOF
 for arg in "$@"; do
   case "$arg" in
     -f|--force) FORCE_REINSTALL=1 ;;
+    --hyprls-only) HYPRLS_ONLY=1 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown option: $arg"; usage; exit 1 ;;
   esac
@@ -54,6 +57,64 @@ hyprls_version() {
 npm_pkg_installed() {
   command -v npm >/dev/null 2>&1 && npm list -g "$1" >/dev/null 2>&1
 }
+
+build_hyprls() {
+  echo -e "${BLUE}Step 8: Optional - Build hyprls from source${NC}"
+  REPLY="n"
+  if [ "$FORCE_REINSTALL" -ne 1 ] && hyprls_installed; then
+    echo -e "${GREEN}✓ hyprls already installed${NC}"
+    HYPRLS_VER=$(hyprls_version)
+    [ -n "$HYPRLS_VER" ] && echo -e "${GREEN}  Version: ${HYPRLS_VER}${NC}"
+    return 0
+  fi
+
+  if [ "$HYPRLS_ONLY" -eq 0 ]; then
+    read -p "Build hyprls from source? (y/n) " -n 1 -r
+    echo
+  else
+    REPLY="y"
+  fi
+
+  if [[ $REPLY =~ ^[Yy]$ ]] && { [ "$FORCE_REINSTALL" -eq 1 ] || ! hyprls_installed; }; then
+    echo -e "${BLUE}Installing hyprls build dependencies...${NC}"
+    sudo apt-get install -y cmake meson wayland-protocols libwayland-dev libxcb-render0-dev libxcb-shape0-dev || true
+    # aquamarine (Hyprland dependency) - package name may vary by distro
+    sudo apt-get install -y libaquamarine-dev || true
+
+    if ! pkg-config --exists 'aquamarine>=0.9.3' 2>/dev/null; then
+      echo -e "${YELLOW}⚠ aquamarine>=0.9.3 not found via pkg-config; skipping hyprls build${NC}"
+      echo -e "${YELLOW}Install the aquamarine development package for your distro, then re-run with --force${NC}"
+      FAILED_HYPRLS+=("hyprls")
+      echo -e "${YELLOW}Note: hyprls is optional; only needed for Hyprland configs${NC}"
+      echo ""
+      return 0
+    fi
+
+    if [ -d /tmp/hyprland ]; then
+      rm -rf /tmp/hyprland
+    fi
+    echo -e "${BLUE}Cloning hyprland repository...${NC}"
+    (cd /tmp && git clone --depth 1 https://github.com/hyprwm/hyprland.git)
+    echo -e "${BLUE}Building hyprls...${NC}"
+    if (cd /tmp/hyprland && cmake -B build && cmake --build build --target hyprls 2>/dev/null); then
+      echo -e "${BLUE}Installing hyprls...${NC}"
+      sudo cp /tmp/hyprland/build/hyprls /usr/local/bin/ 2>/dev/null || sudo install -m 755 /tmp/hyprland/build/hyprls /usr/local/bin/
+      echo -e "${GREEN}✓ hyprls installed${NC}"
+    else
+      echo -e "${YELLOW}⚠ hyprls build failed (check dependencies)${NC}"
+      FAILED_HYPRLS+=("hyprls")
+      echo "  Install build dependencies: cmake, meson, wayland-protocols, libwayland-dev"
+    fi
+  else
+    echo -e "${YELLOW}Skipping hyprls build${NC}"
+    echo -e "${YELLOW}Note: hyprls is optional; only needed for Hyprland configs${NC}"
+  fi
+}
+
+if [ "$HYPRLS_ONLY" -eq 1 ]; then
+  build_hyprls
+  exit 0
+fi
 
 # ================================================================================================
 # Backup existing NeoVim configuration
@@ -269,52 +330,7 @@ if [ $PYTHON_INSTALLED -eq 0 ]; then
   echo -e "${YELLOW}Warning: Python packages install failed${NC}"
 fi
 
-echo -e "${BLUE}Step 8: Optional - Build hyprls from source${NC}"
-REPLY="n"
-if [ "$FORCE_REINSTALL" -ne 1 ] && hyprls_installed; then
-  echo -e "${GREEN}✓ hyprls already installed${NC}"
-  HYPRLS_VER=$(hyprls_version)
-  [ -n "$HYPRLS_VER" ] && echo -e "${GREEN}  Version: ${HYPRLS_VER}${NC}"
-else
-  read -p "Build hyprls from source? (y/n) " -n 1 -r
-  echo
-fi
-if [[ $REPLY =~ ^[Yy]$ ]] && { [ "$FORCE_REINSTALL" -eq 1 ] || ! hyprls_installed; }; then
-  echo -e "${BLUE}Installing hyprls build dependencies...${NC}"
-  sudo apt-get install -y cmake meson wayland-protocols libwayland-dev libxcb-render0-dev libxcb-shape0-dev || true
-  # aquamarine (Hyprland dependency) - package name may vary by distro
-  sudo apt-get install -y libaquamarine-dev || true
-
-  if ! pkg-config --exists 'aquamarine>=0.9.3' 2>/dev/null; then
-    echo -e "${YELLOW}⚠ aquamarine>=0.9.3 not found via pkg-config; skipping hyprls build${NC}"
-    echo -e "${YELLOW}Install the aquamarine development package for your distro, then re-run with --force${NC}"
-    FAILED_HYPRLS+=("hyprls")
-    echo -e "${YELLOW}Note: hyprls is optional; only needed for Hyprland configs${NC}"
-    echo ""
-    goto_skip_hyprls_build=1
-  else
-    goto_skip_hyprls_build=0
-  fi
-
-  if [ -d /tmp/hyprland ]; then
-    rm -rf /tmp/hyprland
-  fi
-  echo -e "${BLUE}Cloning hyprland repository...${NC}"
-  (cd /tmp && git clone --depth 1 https://github.com/hyprwm/hyprland.git)
-  echo -e "${BLUE}Building hyprls...${NC}"
-  if [ "${goto_skip_hyprls_build}" -eq 0 ] && (cd /tmp/hyprland && cmake -B build && cmake --build build --target hyprls 2>/dev/null); then
-    echo -e "${BLUE}Installing hyprls...${NC}"
-    sudo cp /tmp/hyprland/build/hyprls /usr/local/bin/ 2>/dev/null || sudo install -m 755 /tmp/hyprland/build/hyprls /usr/local/bin/
-    echo -e "${GREEN}✓ hyprls installed${NC}"
-  else
-    echo -e "${YELLOW}⚠ hyprls build failed (check dependencies)${NC}"
-    FAILED_HYPRLS+=("hyprls")
-    echo "  Install build dependencies: cmake, meson, wayland-protocols, libwayland-dev"
-  fi
-else
-  echo -e "${YELLOW}Skipping hyprls build${NC}"
-  echo -e "${YELLOW}Note: hyprls is optional; only needed for Hyprland configs${NC}"
-fi
+build_hyprls
 
 echo ""
 
