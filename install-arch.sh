@@ -21,6 +21,17 @@ FAILED_PYTHON=()
 FAILED_AUR=()
 
 # ================================================================================================
+# hyprls helpers
+# ================================================================================================
+hyprls_installed() {
+    command -v hyprls >/dev/null 2>&1 || pacman -Q hyprls &>/dev/null
+}
+
+hyprls_version() {
+    hyprls --version 2>/dev/null | head -1
+}
+
+# ================================================================================================
 # Backup existing NeoVim configuration
 # ================================================================================================
 backup_neovim_config() {
@@ -189,15 +200,31 @@ echo -e "${BLUE}Step 7: Checking for AUR helper...${NC}"
 if command -v yay &> /dev/null; then
     echo -e "${GREEN}✓ yay found${NC}"
     echo -e "${BLUE}Step 8: Installing AUR packages (recommended)...${NC}"
-    yay -S --noconfirm hyprls alejandra-bin prettierd || {
-        FAILED_AUR+=("hyprls" "alejandra-bin" "prettierd")
+    AUR_PKGS=(alejandra-bin prettierd)
+    if hyprls_installed; then
+        echo -e "${GREEN}✓ hyprls already installed${NC}"
+        HYPRLS_VER=$(hyprls_version)
+        [ -n "$HYPRLS_VER" ] && echo -e "${GREEN}  Version: ${HYPRLS_VER}${NC}"
+    else
+        AUR_PKGS=(hyprls "${AUR_PKGS[@]}")
+    fi
+    yay -S --noconfirm "${AUR_PKGS[@]}" || {
+        FAILED_AUR+=("${AUR_PKGS[@]}")
         echo -e "${YELLOW}Warning: Some AUR packages failed to install${NC}"
     }
 elif command -v paru &> /dev/null; then
     echo -e "${GREEN}✓ paru found${NC}"
     echo -e "${BLUE}Step 8: Installing AUR packages (recommended)...${NC}"
-    paru -S --noconfirm hyprls alejandra-bin prettierd || {
-        FAILED_AUR+=("hyprls" "alejandra-bin" "prettierd")
+    AUR_PKGS=(alejandra-bin prettierd)
+    if hyprls_installed; then
+        echo -e "${GREEN}✓ hyprls already installed${NC}"
+        HYPRLS_VER=$(hyprls_version)
+        [ -n "$HYPRLS_VER" ] && echo -e "${GREEN}  Version: ${HYPRLS_VER}${NC}"
+    else
+        AUR_PKGS=(hyprls "${AUR_PKGS[@]}")
+    fi
+    paru -S --noconfirm "${AUR_PKGS[@]}" || {
+        FAILED_AUR+=("${AUR_PKGS[@]}")
         echo -e "${YELLOW}Warning: Some AUR packages failed to install${NC}"
     }
 else

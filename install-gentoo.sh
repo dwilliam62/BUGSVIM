@@ -21,6 +21,17 @@ FAILED_PYTHON=()
 FAILED_BUILD=()
 
 # ================================================================================================
+# hyprls helpers
+# ================================================================================================
+hyprls_installed() {
+  command -v hyprls >/dev/null 2>&1
+}
+
+hyprls_version() {
+  hyprls --version 2>/dev/null | head -1
+}
+
+# ================================================================================================
 # Backup existing NeoVim configuration
 # ================================================================================================
 backup_neovim_config() {
@@ -262,9 +273,15 @@ else
 fi
 
 echo -e "${BLUE}Step 10: Optional - Build hyprls from source${NC}"
-read -p "Build hyprls from source? (y/n) " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
+if hyprls_installed; then
+  echo -e "${GREEN}✓ hyprls already installed${NC}"
+  HYPRLS_VER=$(hyprls_version)
+  [ -n "$HYPRLS_VER" ] && echo -e "${GREEN}  Version: ${HYPRLS_VER}${NC}"
+else
+  read -p "Build hyprls from source? (y/n) " -n 1 -r
+  echo
+fi
+if ! hyprls_installed && [[ $REPLY =~ ^[Yy]$ ]]; then
   echo -e "${BLUE}Installing hyprls build dependencies...${NC}"
   check_and_install_packages \
     dev-build/cmake \
