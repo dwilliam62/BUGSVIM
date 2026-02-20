@@ -317,40 +317,39 @@ else
   FAILED_BUILD+=("nil")
 fi
 
-echo -e "${BLUE}Step 10: Optional - Build hyprls from source${NC}"
+echo -e "${BLUE}Step 10: Optional - Install hyprls from repo${NC}"
 REPLY="n"
 if [ "$FORCE_REINSTALL" -ne 1 ] && hyprls_installed; then
   echo -e "${GREEN}✓ hyprls already installed${NC}"
   HYPRLS_VER=$(hyprls_version)
   [ -n "$HYPRLS_VER" ] && echo -e "${GREEN}  Version: ${HYPRLS_VER}${NC}"
 else
-  read -p "Build hyprls from source? (y/n) " -n 1 -r
+  read -p "Install hyprls from repo? (y/n) " -n 1 -r
   echo
 fi
 if [[ $REPLY =~ ^[Yy]$ ]] && { [ "$FORCE_REINSTALL" -eq 1 ] || ! hyprls_installed; }; then
   echo -e "${BLUE}Installing hyprls build dependencies...${NC}"
-  check_and_install_packages \
-    dev-build/cmake \
-    dev-util/meson \
-    dev-libs/wayland \
-    x11-libs/xcb-util || true
+  check_and_install_packages dev-lang/go || true
 
-  if [ -d /tmp/hyprland ]; then
-    rm -rf /tmp/hyprland
-  fi
-  echo -e "${BLUE}Cloning hyprland repository...${NC}"
-  (cd /tmp && git clone --depth 1 https://github.com/hyprwm/hyprland.git)
-  echo -e "${BLUE}Building hyprls...${NC}"
-  if (cd /tmp/hyprland && cmake -B build && cmake --build build --target hyprls 2>/dev/null); then
-    echo -e "${BLUE}Installing hyprls...${NC}"
-    sudo cp /tmp/hyprland/build/hyprls /usr/local/bin/ 2>/dev/null || sudo install -m 755 /tmp/hyprland/build/hyprls /usr/local/bin/
-    echo -e "${GREEN}✓ hyprls installed${NC}"
-  else
-    echo -e "${YELLOW}⚠ hyprls build failed (check dependencies)${NC}"
+  if ! command -v go >/dev/null 2>&1; then
+    echo -e "${YELLOW}⚠ Go not found; cannot install hyprls${NC}"
     FAILED_BUILD+=("hyprls")
+  else
+    mkdir -p "$HOME/.local/bin"
+    echo -e "${BLUE}Installing hyprls via go install...${NC}"
+    if GOBIN="$HOME/.local/bin" go install github.com/hyprland-community/hyprls/cmd/hyprls@latest 2>&1 | tee /tmp/hyprls-build.log; then
+      echo -e "${GREEN}✓ hyprls installed to $HOME/.local/bin${NC}"
+    else
+      echo -e "${YELLOW}⚠ hyprls install failed${NC}"
+      FAILED_BUILD+=("hyprls")
+      echo "  Build log: /tmp/hyprls-build.log"
+    fi
+    if ! command -v hyprls >/dev/null 2>&1; then
+      echo -e "${YELLOW}Note: add ~/.local/bin to PATH to use hyprls${NC}"
+    fi
   fi
 else
-  echo -e "${YELLOW}Skipping hyprls build${NC}"
+  echo -e "${YELLOW}Skipping hyprls install${NC}"
   echo -e "${YELLOW}Note: hyprls is optional; only needed for Hyprland configs${NC}"
 fi
 
