@@ -282,6 +282,19 @@ fi
 if [[ $REPLY =~ ^[Yy]$ ]] && { [ "$FORCE_REINSTALL" -eq 1 ] || ! hyprls_installed; }; then
   echo -e "${BLUE}Installing hyprls build dependencies...${NC}"
   sudo apt-get install -y cmake meson wayland-protocols libwayland-dev libxcb-render0-dev libxcb-shape0-dev || true
+  # aquamarine (Hyprland dependency) - package name may vary by distro
+  sudo apt-get install -y libaquamarine-dev || true
+
+  if ! pkg-config --exists 'aquamarine>=0.9.3' 2>/dev/null; then
+    echo -e "${YELLOW}⚠ aquamarine>=0.9.3 not found via pkg-config; skipping hyprls build${NC}"
+    echo -e "${YELLOW}Install the aquamarine development package for your distro, then re-run with --force${NC}"
+    FAILED_HYPRLS+=("hyprls")
+    echo -e "${YELLOW}Note: hyprls is optional; only needed for Hyprland configs${NC}"
+    echo ""
+    goto_skip_hyprls_build=1
+  else
+    goto_skip_hyprls_build=0
+  fi
 
   if [ -d /tmp/hyprland ]; then
     rm -rf /tmp/hyprland
@@ -289,7 +302,7 @@ if [[ $REPLY =~ ^[Yy]$ ]] && { [ "$FORCE_REINSTALL" -eq 1 ] || ! hyprls_installe
   echo -e "${BLUE}Cloning hyprland repository...${NC}"
   (cd /tmp && git clone --depth 1 https://github.com/hyprwm/hyprland.git)
   echo -e "${BLUE}Building hyprls...${NC}"
-  if (cd /tmp/hyprland && cmake -B build && cmake --build build --target hyprls 2>/dev/null); then
+  if [ "${goto_skip_hyprls_build}" -eq 0 ] && (cd /tmp/hyprland && cmake -B build && cmake --build build --target hyprls 2>/dev/null); then
     echo -e "${BLUE}Installing hyprls...${NC}"
     sudo cp /tmp/hyprland/build/hyprls /usr/local/bin/ 2>/dev/null || sudo install -m 755 /tmp/hyprland/build/hyprls /usr/local/bin/
     echo -e "${GREEN}✓ hyprls installed${NC}"
