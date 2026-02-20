@@ -78,7 +78,7 @@ build_hyprls() {
   if [[ $REPLY =~ ^[Yy]$ ]] && { [ "$FORCE_REINSTALL" -eq 1 ] || ! hyprls_installed; }; then
     echo -e "${BLUE}Installing hyprls build dependencies...${NC}"
     sudo apt-get install -y cmake meson wayland-protocols libwayland-dev libxcb-render0-dev libxcb-shape0-dev || true
-    sudo apt-get install -y libudis86-dev || true
+    sudo apt-get install -y libudis86-dev libhyprland-dev libhyprcursor-dev libhyprutils-dev libhyprgraphics-dev libre2-dev libmuparser-dev libxcb-errors-dev || true
     # aquamarine (Hyprland dependency) - package name may vary by distro
     sudo apt-get install -y libaquamarine-dev || true
 
