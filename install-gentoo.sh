@@ -56,6 +56,55 @@ npm_pkg_installed() {
 }
 
 # ================================================================================================
+# repo helpers
+# ================================================================================================
+eselect_repo_available() {
+  eselect repository list &>/dev/null
+}
+
+repo_known() {
+  eselect repository list 2>/dev/null | awk '{print $2}' | grep -qx "$1"
+}
+
+repo_enabled() {
+  eselect repository list -i 2>/dev/null | awk '{print $2}' | grep -qx "$1"
+}
+
+ensure_eselect_repository() {
+  if ! eselect_repo_available; then
+    echo -e "${YELLOW}Note: eselect-repository not available, installing...${NC}"
+    sudo emerge --noreplace app-eselect/eselect-repository || return 1
+  fi
+}
+
+enable_repo() {
+  local repo="$1"
+  local sync_type="${2:-}"
+  local sync_uri="${3:-}"
+  ensure_eselect_repository || return 1
+
+  if repo_enabled "$repo"; then
+    echo -e "${GREEN}✓ ${repo} repo already enabled${NC}"
+    return 0
+  fi
+
+  if ! repo_known "$repo"; then
+    if [ -n "$sync_type" ] && [ -n "$sync_uri" ]; then
+      echo -e "${YELLOW}Repo '${repo}' not in eselect list; adding via '${sync_type}'...${NC}"
+      sudo eselect repository add "$repo" "$sync_type" "$sync_uri" || return 1
+    else
+      echo -e "${YELLOW}Warning: repo '${repo}' not found in eselect list${NC}"
+      return 1
+    fi
+  fi
+
+  echo -e "${BLUE}Enabling repo: ${repo}${NC}"
+  sudo eselect repository enable "$repo" || return 1
+  sudo emaint sync -r "$repo" || sudo emerge --sync || true
+  return 0
+}
+
+# ================================================================================================
 # Backup existing NeoVim configuration
 # ================================================================================================
 backup_neovim_config() {
@@ -190,8 +239,18 @@ check_and_install_packages \
 
 echo -e "${BLUE}Step 3b: Setting up npm for global installs...${NC}"
 if ! command -v npm &>/dev/null; then
-  echo -e "${RED}✗${NC} npm not found - skipping npm configuration"
-  FAILED_PACKAGES+=("npm")
+  echo -e "${RED}✗${NC} npm not found"
+  echo -e "${YELLOW}Note: npm is controlled by the 'npm' USE flag for net-libs/nodejs${NC}"
+  read -p "Enable npm USE flag for net-libs/nodejs now? (y/n) " -n 1 -r
+  echo
+  if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo "net-libs/nodejs npm" | sudo tee -a /etc/portage/package.use/nodejs >/dev/null
+    sudo emerge --update --newuse net-libs/nodejs || true
+  fi
+  if ! command -v npm &>/dev/null; then
+    echo -e "${RED}✗${NC} npm still not available - skipping npm configuration"
+    FAILED_PACKAGES+=("npm")
+  fi
 else
   # Configure npm to use user directory instead of global (avoids permission issues)
   mkdir -p ~/.npm-global
@@ -280,8 +339,26 @@ echo -e "${BLUE}Step 7: Installing Python packages (ruff, pyright)...${NC}"
 PYTHON_INSTALLED=0
 if [ "$FORCE_REINSTALL" -ne 1 ] && command -v ruff >/dev/null 2>&1 && command -v pyright >/dev/null 2>&1; then
   PYTHON_INSTALLED=1
-elif command -v pip3 &>/dev/null; then
-  pip3 install --user ruff pyright 2>/dev/null && PYTHON_INSTALLED=1
+else
+  # Prefer Portage for ruff
+  if ! command -v ruff >/dev/null 2>&1; then
+    if sudo emerge --noreplace dev-util/ruff; then
+      true
+    fi
+  fi
+
+  # Try Portage for pyright via overlay (waffle-builds)
+  if ! command -v pyright >/dev/null 2>&1; then
+    if enable_repo "waffle-builds"; then
+      sudo emerge --noreplace dev-python/pyright || true
+    fi
+  fi
+
+  if command -v ruff >/dev/null 2>&1 && command -v pyright >/dev/null 2>&1; then
+    PYTHON_INSTALLED=1
+  elif command -v pip3 &>/dev/null; then
+    pip3 install --user ruff pyright 2>/dev/null && PYTHON_INSTALLED=1
+  fi
 fi
 
 if [ $PYTHON_INSTALLED -eq 0 ] && command -v python3 &>/dev/null; then
@@ -302,8 +379,14 @@ elif sudo emerge --noreplace dev-lang/lua-language-server 2>/dev/null; then
   echo -e "${GREEN}✓ lua-language-server installed${NC}"
 else
   echo -e "${YELLOW}⚠ lua-language-server not available in main repo${NC}"
-  echo -e "${YELLOW}Install from: https://github.com/LuaLS/lua-language-server/releases${NC}"
-  echo -e "${YELLOW}Or add GURU overlay: eselect repository enable guru && emaint sync -r guru${NC}"
+  if enable_repo "guru"; then
+    sudo emerge --noreplace dev-lang/lua-language-server 2>/dev/null && {
+      echo -e "${GREEN}✓ lua-language-server installed (GURU)${NC}"
+    } || true
+  else
+    echo -e "${YELLOW}Install from: https://github.com/LuaLS/lua-language-server/releases${NC}"
+    echo -e "${YELLOW}Or add GURU overlay: eselect repository enable guru && emaint sync -r guru${NC}"
+  fi
   FAILED_BUILD+=("lua-language-server")
 fi
 
@@ -313,6 +396,14 @@ if qlist -I dev-lang/nil &>/dev/null; then
 elif sudo emerge --noreplace dev-lang/nil; then
   echo -e "${GREEN}✓ nil installed${NC}"
 else
+  # Attempt overlay for nil (configure NIL_OVERLAY to match your system)
+  NIL_OVERLAY="${NIL_OVERLAY:-nix-guix}"
+  NIL_OVERLAY_URI="${NIL_OVERLAY_URI:-https://github.com/trofi/nix-guix-gentoo.git}"
+  if enable_repo "$NIL_OVERLAY" "git" "$NIL_OVERLAY_URI"; then
+    sudo emerge --noreplace dev-lang/nil && {
+      echo -e "${GREEN}✓ nil installed (${NIL_OVERLAY})${NC}"
+    } || true
+  fi
   echo -e "${YELLOW}Warning: nil not available in main repos${NC}"
   FAILED_BUILD+=("nil")
 fi
