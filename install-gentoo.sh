@@ -52,7 +52,11 @@ hyprls_version() {
 }
 
 npm_pkg_installed() {
-  command -v npm >/dev/null 2>&1 && npm list -g "$1" >/dev/null 2>&1
+  if ! command -v npm >/dev/null 2>&1; then
+    return 1
+  fi
+  local prefix="${NPM_PREFIX:-$HOME/.npm-global}"
+  npm list -g --prefix "$prefix" "$1" >/dev/null 2>&1
 }
 
 # ================================================================================================
@@ -238,6 +242,7 @@ check_and_install_packages \
 # Rust installation disabled for now (not needed)
 
 echo -e "${BLUE}Step 3b: Setting up npm for global installs...${NC}"
+NPM_PREFIX="${NPM_PREFIX:-$HOME/.npm-global}"
 if ! command -v npm &>/dev/null; then
   echo -e "${RED}✗${NC} npm not found"
   echo -e "${YELLOW}Note: npm is controlled by the 'npm' USE flag for net-libs/nodejs${NC}"
@@ -253,9 +258,10 @@ if ! command -v npm &>/dev/null; then
   fi
 else
   # Configure npm to use user directory instead of global (avoids permission issues)
-  mkdir -p ~/.npm-global
-  npm config set prefix '~/.npm-global' --location=per-user 2>/dev/null || true
-  export PATH=~/.npm-global/bin:$PATH
+  mkdir -p "$NPM_PREFIX"
+  npm config set prefix "$NPM_PREFIX" --location=user 2>/dev/null || npm config set prefix "$NPM_PREFIX" 2>/dev/null || true
+  export NPM_CONFIG_PREFIX="$NPM_PREFIX"
+  export PATH="$NPM_PREFIX/bin:$PATH"
   echo -e "${GREEN}✓ npm configured for user installs${NC}"
 fi
 
@@ -286,7 +292,7 @@ else
   echo -e "${YELLOW}Warning: shfmt not available - will install via npm${NC}"
   if command -v npm &>/dev/null; then
     if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed shfmt; then
-      npm install -g shfmt || FAILED_NPM+=("shfmt")
+    npm install -g --prefix "$NPM_PREFIX" shfmt || FAILED_NPM+=("shfmt")
     else
       echo -e "${GREEN}✓ shfmt already installed${NC}"
     fi
@@ -308,7 +314,7 @@ fi
 echo -e "${BLUE}  Installing prettier (Web formatter)...${NC}"
 if command -v npm &>/dev/null; then
   if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed prettier; then
-    npm install -g prettier || FAILED_NPM+=("prettier")
+    npm install -g --prefix "$NPM_PREFIX" prettier || FAILED_NPM+=("prettier")
   else
     echo -e "${GREEN}✓ prettier already installed${NC}"
   fi
@@ -327,21 +333,21 @@ echo -e "${BLUE}Step 6: Installing npm global packages...${NC}"
 if command -v npm &>/dev/null; then
   echo -e "${BLUE}  Installing prettierd (Prettier daemon)...${NC}"
   if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed @fsouza/prettierd; then
-    npm install -g @fsouza/prettierd || FAILED_NPM+=("@fsouza/prettierd")
+    npm install -g --prefix "$NPM_PREFIX" @fsouza/prettierd || FAILED_NPM+=("@fsouza/prettierd")
   else
     echo -e "${GREEN}✓ @fsouza/prettierd already installed${NC}"
   fi
 
   echo -e "${BLUE}  Installing vscode-langservers...${NC}"
   if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed vscode-langservers-extracted; then
-    npm install -g vscode-langservers-extracted || FAILED_NPM+=("vscode-langservers-extracted")
+    npm install -g --prefix "$NPM_PREFIX" vscode-langservers-extracted || FAILED_NPM+=("vscode-langservers-extracted")
   else
     echo -e "${GREEN}✓ vscode-langservers-extracted already installed${NC}"
   fi
 
   echo -e "${BLUE}  Installing bash-language-server...${NC}"
   if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed bash-language-server; then
-    npm install -g bash-language-server || FAILED_NPM+=("bash-language-server")
+    npm install -g --prefix "$NPM_PREFIX" bash-language-server || FAILED_NPM+=("bash-language-server")
   else
     echo -e "${GREEN}✓ bash-language-server already installed${NC}"
   fi
@@ -488,18 +494,22 @@ done
 
 echo ""
 echo "Checking npm packages:"
-if npm list -g @fsouza/prettierd &>/dev/null; then
-  echo -e "  ${GREEN}✓${NC} @fsouza/prettierd"
-else
-  echo -e "  ${RED}✗${NC} @fsouza/prettierd (missing)"
-  MISSING=1
-fi
+if command -v npm &>/dev/null; then
+  if npm list -g --prefix "$NPM_PREFIX" @fsouza/prettierd &>/dev/null; then
+    echo -e "  ${GREEN}✓${NC} @fsouza/prettierd"
+  else
+    echo -e "  ${RED}✗${NC} @fsouza/prettierd (missing)"
+    MISSING=1
+  fi
 
-if npm list -g vscode-langservers-extracted &>/dev/null; then
-  echo -e "  ${GREEN}✓${NC} vscode-langservers-extracted"
+  if npm list -g --prefix "$NPM_PREFIX" vscode-langservers-extracted &>/dev/null; then
+    echo -e "  ${GREEN}✓${NC} vscode-langservers-extracted"
+  else
+    echo -e "  ${RED}✗${NC} vscode-langservers-extracted (missing)"
+    MISSING=1
+  fi
 else
-  echo -e "  ${RED}✗${NC} vscode-langservers-extracted (missing)"
-  MISSING=1
+  echo -e "  ${YELLOW}○${NC} npm not available"
 fi
 
 echo ""
