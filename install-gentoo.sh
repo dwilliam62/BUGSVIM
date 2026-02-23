@@ -421,6 +421,15 @@ if qlist -I dev-lang/nil &>/dev/null; then
   echo -e "${GREEN}✓ nil already installed${NC}"
 else
   NIL_INSTALLED=0
+  if ! command -v nix >/dev/null 2>&1; then
+    if [ -x /nix/var/nix/profiles/default/bin/nix ]; then
+      export PATH="/nix/var/nix/profiles/default/bin:$PATH"
+    elif [ -f /etc/profile.d/nix.sh ]; then
+      # shellcheck disable=SC1091
+      . /etc/profile.d/nix.sh
+    fi
+  fi
+
   if command -v nix >/dev/null 2>&1; then
     if [ "${NIX_AUTO_INSTALL_NIL:-1}" -eq 1 ]; then
       nix profile install nixpkgs#nil && NIL_INSTALLED=1 || true
@@ -461,9 +470,12 @@ if [ "$FORCE_REINSTALL" -ne 1 ] && hyprls_installed; then
   echo -e "${GREEN}✓ hyprls already installed${NC}"
   HYPRLS_VER=$(hyprls_version)
   [ -n "$HYPRLS_VER" ] && echo -e "${GREEN}  Version: ${HYPRLS_VER}${NC}"
-elif [ -t 0 ]; then
+elif [ "${HYPRLS_PROMPT:-0}" -eq 1 ] && [ -t 0 ]; then
   read -p "Install hyprls from repo? (y/n) " -n 1 -r
   echo
+else
+  echo -e "${YELLOW}Skipping hyprls install${NC}"
+  echo -e "${YELLOW}Note: set HYPRLS_PROMPT=1 to enable prompt${NC}"
 fi
 if [[ $REPLY =~ ^[Yy]$ ]] && { [ "$FORCE_REINSTALL" -eq 1 ] || ! hyprls_installed; }; then
   echo -e "${BLUE}Installing hyprls build dependencies...${NC}"
