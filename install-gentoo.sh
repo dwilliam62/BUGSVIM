@@ -374,6 +374,10 @@ else
       sudo emerge --noreplace dev-python/pyright || true
     fi
   fi
+  # Fallback to npm for pyright if still missing
+  if ! command -v pyright >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then
+    npm install -g --prefix "$NPM_PREFIX" pyright || FAILED_NPM+=("pyright")
+  fi
 
   if command -v ruff >/dev/null 2>&1 && command -v pyright >/dev/null 2>&1; then
     PYTHON_INSTALLED=1
@@ -421,12 +425,29 @@ else
   NIL_OVERLAY="${NIL_OVERLAY:-nix-guix}"
   NIL_OVERLAY_URI="${NIL_OVERLAY_URI:-https://github.com/trofi/nix-guix-gentoo.git}"
   if enable_repo "$NIL_OVERLAY" "git" "$NIL_OVERLAY_URI"; then
-    sudo emerge --noreplace dev-lang/nil && {
+    if sudo emerge --noreplace dev-lang/nil; then
       echo -e "${GREEN}✓ nil installed (${NIL_OVERLAY})${NC}"
-    } || true
+    else
+      echo -e "${YELLOW}Warning: nil not available in ${NIL_OVERLAY}${NC}"
+    fi
   fi
-  echo -e "${YELLOW}Warning: nil not available in main repos${NC}"
-  FAILED_BUILD+=("nil")
+
+  if ! command -v nil >/dev/null 2>&1; then
+    if command -v nix >/dev/null 2>&1; then
+      read -p "Install nil via nix profile? (y/n) " -n 1 -r
+      echo
+      if [[ $REPLY =~ ^[Yy]$ ]]; then
+        nix profile install nixpkgs#nil || true
+      fi
+    fi
+  fi
+
+  if command -v nil >/dev/null 2>&1; then
+    echo -e "${GREEN}✓ nil installed${NC}"
+  else
+    echo -e "${YELLOW}Warning: nil not available${NC}"
+    FAILED_BUILD+=("nil")
+  fi
 fi
 
 echo -e "${BLUE}Step 10: Optional - Install hyprls from repo${NC}"
