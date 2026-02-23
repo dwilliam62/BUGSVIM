@@ -420,28 +420,34 @@ echo -e "${BLUE}Step 9: Installing Nil (Nix LSP)...${NC}"
 if qlist -I dev-lang/nil &>/dev/null; then
   echo -e "${GREEN}✓ nil already installed${NC}"
 else
+  NIL_INSTALLED=0
   if command -v nix >/dev/null 2>&1; then
-    read -p "Install nil via nix profile (recommended)? (y/n) " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-      nix profile install nixpkgs#nil || true
+    if [ "${NIX_AUTO_INSTALL_NIL:-1}" -eq 1 ]; then
+      nix profile install nixpkgs#nil && NIL_INSTALLED=1 || true
+    else
+      read -p "Install nil via nix profile (recommended)? (y/n) " -n 1 -r
+      echo
+      if [[ $REPLY =~ ^[Yy]$ ]]; then
+        nix profile install nixpkgs#nil && NIL_INSTALLED=1 || true
+      fi
     fi
   fi
 
-  if ! command -v nil >/dev/null 2>&1; then
+  if [ "$NIL_INSTALLED" -ne 1 ] && ! command -v nil >/dev/null 2>&1; then
     # Attempt overlay for nil (configure NIL_OVERLAY to match your system)
     NIL_OVERLAY="${NIL_OVERLAY:-nix-guix}"
     NIL_OVERLAY_URI="${NIL_OVERLAY_URI:-https://github.com/trofi/nix-guix-gentoo.git}"
     if enable_repo "$NIL_OVERLAY" "git" "$NIL_OVERLAY_URI"; then
       if sudo emerge --noreplace dev-lang/nil; then
         echo -e "${GREEN}✓ nil installed (${NIL_OVERLAY})${NC}"
+        NIL_INSTALLED=1
       else
         echo -e "${YELLOW}Warning: nil not available in ${NIL_OVERLAY}${NC}"
       fi
     fi
   fi
 
-  if command -v nil >/dev/null 2>&1; then
+  if [ "$NIL_INSTALLED" -eq 1 ] || command -v nil >/dev/null 2>&1; then
     echo -e "${GREEN}✓ nil installed${NC}"
   else
     echo -e "${YELLOW}Warning: nil not available${NC}"
@@ -455,7 +461,7 @@ if [ "$FORCE_REINSTALL" -ne 1 ] && hyprls_installed; then
   echo -e "${GREEN}✓ hyprls already installed${NC}"
   HYPRLS_VER=$(hyprls_version)
   [ -n "$HYPRLS_VER" ] && echo -e "${GREEN}  Version: ${HYPRLS_VER}${NC}"
-else
+elif [ -t 0 ]; then
   read -p "Install hyprls from repo? (y/n) " -n 1 -r
   echo
 fi
