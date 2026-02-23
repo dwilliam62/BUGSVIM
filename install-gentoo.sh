@@ -466,12 +466,12 @@ else
 
   if [ -n "$NIX_BIN" ]; then
     if [ "${NIX_AUTO_INSTALL_NIL:-1}" -eq 1 ]; then
-      "$NIX_BIN" profile install nixpkgs#nil && NIL_INSTALLED=1 || true
+      "$NIX_BIN" --extra-experimental-features "nix-command flakes" profile add nixpkgs#nil && NIL_INSTALLED=1 || true
     else
       read -p "Install nil via nix profile (recommended)? (y/n) " -n 1 -r
       echo
       if [[ $REPLY =~ ^[Yy]$ ]]; then
-        "$NIX_BIN" profile install nixpkgs#nil && NIL_INSTALLED=1 || true
+        "$NIX_BIN" --extra-experimental-features "nix-command flakes" profile add nixpkgs#nil && NIL_INSTALLED=1 || true
       fi
     fi
   fi
@@ -505,13 +505,13 @@ fi
 
 echo -e "${BLUE}Step 10: Optional - Install hyprls from repo${NC}"
 REPLY="n"
-if [ "${HYPRLS_SKIP:-0}" -eq 1 ]; then
-  echo -e "${YELLOW}Skipping hyprls install${NC}"
-  echo -e "${YELLOW}Note: set HYPRLS_SKIP=1 to disable hyprls step${NC}"
-elif [ "$FORCE_REINSTALL" -ne 1 ] && hyprls_installed; then
+if [ "$FORCE_REINSTALL" -ne 1 ] && hyprls_installed; then
   echo -e "${GREEN}✓ hyprls already installed${NC}"
   HYPRLS_VER=$(hyprls_version)
   [ -n "$HYPRLS_VER" ] && echo -e "${GREEN}  Version: ${HYPRLS_VER}${NC}"
+elif [ "${HYPRLS_SKIP:-0}" -eq 1 ]; then
+  echo -e "${YELLOW}Skipping hyprls install${NC}"
+  echo -e "${YELLOW}Note: set HYPRLS_SKIP=1 to disable hyprls step${NC}"
 elif [ "${HYPRLS_PROMPT:-0}" -eq 1 ] && [ -t 0 ]; then
   read -p "Install hyprls from repo? (y/n) " -n 1 -r
   echo
