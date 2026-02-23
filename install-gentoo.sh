@@ -48,7 +48,11 @@ hyprls_installed() {
 }
 
 hyprls_version() {
-  hyprls --version 2>/dev/null | head -1
+  if command -v timeout >/dev/null 2>&1; then
+    timeout 2s hyprls --version 2>/dev/null | head -1
+  else
+    return 0
+  fi
 }
 
 npm_pkg_installed() {
@@ -434,6 +438,11 @@ else
     # shellcheck disable=SC1091
     . /etc/profile.d/nix.sh
     command -v nix >/dev/null 2>&1 && NIX_BIN="$(command -v nix)"
+  fi
+  if [ -z "$NIX_BIN" ] && [ "${NIX_AUTO_INSTALL_NIX:-1}" -eq 1 ]; then
+    if sudo emerge --noreplace app-misc/nix; then
+      command -v nix >/dev/null 2>&1 && NIX_BIN="$(command -v nix)"
+    fi
   fi
 
   if [ -n "$NIX_BIN" ]; then
