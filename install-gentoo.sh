@@ -48,11 +48,7 @@ hyprls_installed() {
 }
 
 hyprls_version() {
-  if command -v timeout >/dev/null 2>&1; then
-    timeout 2s hyprls --version 2>/dev/null | head -1
-  else
-    return 0
-  fi
+  return 0
 }
 
 npm_pkg_installed() {
@@ -110,6 +106,27 @@ enable_repo() {
   sudo eselect repository enable "$repo" || return 1
   sudo emaint sync -r "$repo" || sudo emerge --sync || true
   return 0
+}
+
+# ================================================================================================
+# nix helpers
+# ================================================================================================
+install_nix() {
+  if command -v nix >/dev/null 2>&1; then
+    return 0
+  fi
+  echo -e "${BLUE}Installing Nix package manager...${NC}"
+  local url="${NIX_INSTALL_URL:-https://nixos.org/nix/install}"
+  local flags="${NIX_INSTALL_FLAGS:---daemon --yes}"
+  if curl -fsSL "$url" | sudo sh -s -- $flags; then
+    if [ -f /etc/profile.d/nix.sh ]; then
+      # shellcheck disable=SC1091
+      . /etc/profile.d/nix.sh
+    fi
+    return 0
+  fi
+  echo -e "${YELLOW}Warning: Nix install failed${NC}"
+  return 1
 }
 
 # ================================================================================================
@@ -426,7 +443,9 @@ if qlist -I dev-lang/nil &>/dev/null; then
 else
   NIL_INSTALLED=0
   NIX_BIN=""
-  if command -v nix >/dev/null 2>&1; then
+  if [ -n "${NIX_BIN_OVERRIDE:-}" ] && [ -x "${NIX_BIN_OVERRIDE:-}" ]; then
+    NIX_BIN="$NIX_BIN_OVERRIDE"
+  elif command -v nix >/dev/null 2>&1; then
     NIX_BIN="$(command -v nix)"
   elif [ -x /nix/var/nix/profiles/default/bin/nix ]; then
     NIX_BIN="/nix/var/nix/profiles/default/bin/nix"
@@ -440,7 +459,7 @@ else
     command -v nix >/dev/null 2>&1 && NIX_BIN="$(command -v nix)"
   fi
   if [ -z "$NIX_BIN" ] && [ "${NIX_AUTO_INSTALL_NIX:-1}" -eq 1 ]; then
-    if sudo emerge --noreplace app-misc/nix; then
+    if install_nix; then
       command -v nix >/dev/null 2>&1 && NIX_BIN="$(command -v nix)"
     fi
   fi
@@ -476,6 +495,7 @@ else
   else
     if [ -z "$NIX_BIN" ]; then
       echo -e "${YELLOW}Warning: nix not found; install nix to get nil (nix profile install nixpkgs#nil)${NC}"
+      echo -e "${YELLOW}Tip: set NIX_BIN_OVERRIDE to your nix binary path if it's not on PATH${NC}"
       echo -e "${YELLOW}You can force overlay attempt with NIL_OVERLAY_FORCE=1${NC}"
     fi
     echo -e "${YELLOW}Warning: nil not available${NC}"
@@ -485,7 +505,10 @@ fi
 
 echo -e "${BLUE}Step 10: Optional - Install hyprls from repo${NC}"
 REPLY="n"
-if [ "$FORCE_REINSTALL" -ne 1 ] && hyprls_installed; then
+if [ "${HYPRLS_SKIP:-0}" -eq 1 ]; then
+  echo -e "${YELLOW}Skipping hyprls install${NC}"
+  echo -e "${YELLOW}Note: set HYPRLS_SKIP=1 to disable hyprls step${NC}"
+elif [ "$FORCE_REINSTALL" -ne 1 ] && hyprls_installed; then
   echo -e "${GREEN}✓ hyprls already installed${NC}"
   HYPRLS_VER=$(hyprls_version)
   [ -n "$HYPRLS_VER" ] && echo -e "${GREEN}  Version: ${HYPRLS_VER}${NC}"
