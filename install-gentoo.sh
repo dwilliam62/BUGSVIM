@@ -421,28 +421,34 @@ if qlist -I dev-lang/nil &>/dev/null; then
   echo -e "${GREEN}✓ nil already installed${NC}"
 else
   NIL_INSTALLED=0
-  if ! command -v nix >/dev/null 2>&1; then
-    if [ -x /nix/var/nix/profiles/default/bin/nix ]; then
-      export PATH="/nix/var/nix/profiles/default/bin:$PATH"
-    elif [ -f /etc/profile.d/nix.sh ]; then
-      # shellcheck disable=SC1091
-      . /etc/profile.d/nix.sh
-    fi
+  NIX_BIN=""
+  if command -v nix >/dev/null 2>&1; then
+    NIX_BIN="$(command -v nix)"
+  elif [ -x /nix/var/nix/profiles/default/bin/nix ]; then
+    NIX_BIN="/nix/var/nix/profiles/default/bin/nix"
+  elif [ -x "$HOME/.nix-profile/bin/nix" ]; then
+    NIX_BIN="$HOME/.nix-profile/bin/nix"
+  elif [ -x /run/current-system/sw/bin/nix ]; then
+    NIX_BIN="/run/current-system/sw/bin/nix"
+  elif [ -f /etc/profile.d/nix.sh ]; then
+    # shellcheck disable=SC1091
+    . /etc/profile.d/nix.sh
+    command -v nix >/dev/null 2>&1 && NIX_BIN="$(command -v nix)"
   fi
 
-  if command -v nix >/dev/null 2>&1; then
+  if [ -n "$NIX_BIN" ]; then
     if [ "${NIX_AUTO_INSTALL_NIL:-1}" -eq 1 ]; then
-      nix profile install nixpkgs#nil && NIL_INSTALLED=1 || true
+      "$NIX_BIN" profile install nixpkgs#nil && NIL_INSTALLED=1 || true
     else
       read -p "Install nil via nix profile (recommended)? (y/n) " -n 1 -r
       echo
       if [[ $REPLY =~ ^[Yy]$ ]]; then
-        nix profile install nixpkgs#nil && NIL_INSTALLED=1 || true
+        "$NIX_BIN" profile install nixpkgs#nil && NIL_INSTALLED=1 || true
       fi
     fi
   fi
 
-  if [ "$NIL_INSTALLED" -ne 1 ] && ! command -v nil >/dev/null 2>&1; then
+  if [ "$NIL_INSTALLED" -ne 1 ] && ! command -v nil >/dev/null 2>&1 && [ "${NIL_OVERLAY_FORCE:-0}" -eq 1 ]; then
     # Attempt overlay for nil (configure NIL_OVERLAY to match your system)
     NIL_OVERLAY="${NIL_OVERLAY:-nix-guix}"
     NIL_OVERLAY_URI="${NIL_OVERLAY_URI:-https://github.com/trofi/nix-guix-gentoo.git}"
@@ -459,6 +465,10 @@ else
   if [ "$NIL_INSTALLED" -eq 1 ] || command -v nil >/dev/null 2>&1; then
     echo -e "${GREEN}✓ nil installed${NC}"
   else
+    if [ -z "$NIX_BIN" ]; then
+      echo -e "${YELLOW}Warning: nix not found; install nix to get nil (nix profile install nixpkgs#nil)${NC}"
+      echo -e "${YELLOW}You can force overlay attempt with NIL_OVERLAY_FORCE=1${NC}"
+    fi
     echo -e "${YELLOW}Warning: nil not available${NC}"
     FAILED_BUILD+=("nil")
   fi
