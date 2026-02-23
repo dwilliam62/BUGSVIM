@@ -261,28 +261,38 @@ fi
 
 echo -e "${BLUE}Step 4: Installing formatters...${NC}"
 
-# stylua - available in app-editors/stylua
+# stylua - try Portage first, then GURU overlay
 echo -e "${BLUE}  Installing stylua (Lua formatter)...${NC}"
-if qlist -I app-editors/stylua &>/dev/null; then
+if command -v stylua &>/dev/null; then
   echo -e "${GREEN}✓ stylua already installed${NC}"
-elif sudo emerge --noreplace app-editors/stylua; then
+elif sudo emerge --noreplace dev-util/stylua; then
   echo -e "${GREEN}✓ stylua installed${NC}"
 else
+  if enable_repo "guru"; then
+    sudo emerge --noreplace dev-util/stylua && {
+      echo -e "${GREEN}✓ stylua installed (GURU)${NC}"
+    } || true
+  fi
   echo -e "${YELLOW}Warning: stylua install failed${NC}"
 fi
-
+# shfmt - provided by dev-util/sh (includes shfmt)
 # shfmt - available in app-shells/shfmt
 echo -e "${BLUE}  Installing shfmt (Shell formatter)...${NC}"
-if qlist -I app-shells/shfmt &>/dev/null; then
+if command -v shfmt &>/dev/null; then
   echo -e "${GREEN}✓ shfmt already installed${NC}"
-elif sudo emerge --noreplace app-shells/shfmt; then
+elif sudo emerge --noreplace dev-util/sh; then
   echo -e "${GREEN}✓ shfmt installed${NC}"
 else
   echo -e "${YELLOW}Warning: shfmt not available - will install via npm${NC}"
-  if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed shfmt; then
-    npm install -g shfmt || FAILED_NPM+=("shfmt")
+  if command -v npm &>/dev/null; then
+    if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed shfmt; then
+      npm install -g shfmt || FAILED_NPM+=("shfmt")
+    else
+      echo -e "${GREEN}✓ shfmt already installed${NC}"
+    fi
   else
-    echo -e "${GREEN}✓ shfmt already installed${NC}"
+    echo -e "${RED}✗${NC} npm not available - cannot install shfmt via npm"
+    FAILED_NPM+=("shfmt")
   fi
 fi
 
@@ -296,17 +306,22 @@ fi
 
 # prettier - install via npm
 echo -e "${BLUE}  Installing prettier (Web formatter)...${NC}"
-if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed prettier; then
-  npm install -g prettier || FAILED_NPM+=("prettier")
+if command -v npm &>/dev/null; then
+  if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed prettier; then
+    npm install -g prettier || FAILED_NPM+=("prettier")
+  else
+    echo -e "${GREEN}✓ prettier already installed${NC}"
+  fi
 else
-  echo -e "${GREEN}✓ prettier already installed${NC}"
+  echo -e "${RED}✗${NC} npm not available - cannot install prettier"
+  FAILED_NPM+=("prettier")
 fi
 
 echo -e "${BLUE}Step 5: Installing optional convenience tools...${NC}"
 check_and_install_packages \
   dev-vcs/lazygit \
   sys-apps/bat \
-  x11-misc/wl-clipboard || true
+  gui-apps/wl-clipboard || true
 
 echo -e "${BLUE}Step 6: Installing npm global packages...${NC}"
 if command -v npm &>/dev/null; then
@@ -373,14 +388,14 @@ fi
 
 echo -e "${BLUE}Step 8: Installing Lua Language Server...${NC}"
 echo -e "${YELLOW}Note: lua-language-server may need to be installed from source${NC}"
-if qlist -I dev-lang/lua-language-server &>/dev/null; then
+if qlist -I dev-util/lua-language-server &>/dev/null; then
   echo -e "${GREEN}✓ lua-language-server already installed${NC}"
-elif sudo emerge --noreplace dev-lang/lua-language-server 2>/dev/null; then
+elif sudo emerge --noreplace dev-util/lua-language-server 2>/dev/null; then
   echo -e "${GREEN}✓ lua-language-server installed${NC}"
 else
   echo -e "${YELLOW}⚠ lua-language-server not available in main repo${NC}"
   if enable_repo "guru"; then
-    sudo emerge --noreplace dev-lang/lua-language-server 2>/dev/null && {
+    sudo emerge --noreplace dev-util/lua-language-server 2>/dev/null && {
       echo -e "${GREEN}✓ lua-language-server installed (GURU)${NC}"
     } || true
   else
