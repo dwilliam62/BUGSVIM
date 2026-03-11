@@ -163,11 +163,11 @@ run_as_root pkg install -y \
 echo -e "${BLUE}Step 3: Installing language servers...${NC}"
 run_as_root pkg install -y \
   lua \
-  lua-luarocks54 \
-  python39 \
-  py39-pip \
+  lua-luarocks \
+  python3 \
+  py3-pip \
   node \
-  npm-11.6.0 \
+  npm \
   FreeBSD-clang-15.0 \
   bash || true
 
@@ -196,12 +196,8 @@ run_as_root pkg install -y shfmt || echo -e "${YELLOW}Warning: shfmt not availab
 echo -e "${BLUE}  Installing clang-format (via clang)...${NC}"
 run_as_root pkg install -y FreeBSD-clang-15.0 || echo -e "${YELLOW}Warning: clang not available${NC}"
 
-echo -e "${BLUE}  Installing stylua and prettier via npm...${NC}"
-if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed @johnnymorganz/stylua-bin; then
-  npm install -g @johnnymorganz/stylua-bin || echo -e "${YELLOW}Warning: stylua install failed${NC}"
-else
-  echo -e "${GREEN}✓ stylua already installed${NC}"
-fi
+echo -e "${BLUE}  Installing stylua (via pkg) and prettier (via npm)...${NC}"
+run_as_root pkg install -y stylua || echo -e "${YELLOW}Warning: stylua not available${NC}"
 if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed prettier; then
   npm install -g prettier || echo -e "${YELLOW}Warning: prettier install failed${NC}"
 else
@@ -239,24 +235,7 @@ else
   FAILED_NPM+=("@fsouza/prettierd" "vscode-langservers-extracted" "neovim")
 fi
 
-echo -e "${BLUE}Step 7: Installing Python packages...${NC}"
-# Use py39 specifically since we installed that version
-PYTHON_INSTALLED=0
-if [ "$FORCE_REINSTALL" -ne 1 ] && command -v ruff >/dev/null 2>&1 && command -v pyright >/dev/null 2>&1; then
-  PYTHON_INSTALLED=1
-elif command -v py39-pip &> /dev/null; then
-  py39-pip install --user ruff pyright 2>/dev/null && PYTHON_INSTALLED=1
-fi
-
-if [ $PYTHON_INSTALLED -eq 0 ] && command -v python39 &> /dev/null; then
-  python39 -m ensurepip --user 2>/dev/null || true
-  python39 -m pip install --user ruff pyright 2>/dev/null && PYTHON_INSTALLED=1
-fi
-
-if [ $PYTHON_INSTALLED -eq 0 ]; then
-  FAILED_PYTHON+=("ruff" "pyright")
-  echo -e "${YELLOW}Warning: Python packages install failed${NC}"
-fi
+echo -e "${BLUE}Step 7: Skipping Python packages (ruff/pyright removed)...${NC}"
 
 echo -e "${YELLOW}Note: lua-language-server must be installed separately${NC}"
 echo -e "${YELLOW}Install from: https://github.com/LuaLS/lua-language-server/releases${NC}"
@@ -341,16 +320,6 @@ else
   MISSING=1
 fi
 
-echo ""
-echo "Checking Python packages:"
-if python3 -c "import pyright" 2>/dev/null || py39-pip show pyright &>/dev/null; then
-  echo -e "  ${GREEN}✓${NC} pyright"
-else
-  echo -e "  ${RED}✗${NC} pyright (missing)"
-  MISSING=1
-fi
-
-echo ""
 echo "Checking Rust toolchain:"
 if command -v rustc &>/dev/null; then
   echo -e "  ${GREEN}✓${NC} rustc"
