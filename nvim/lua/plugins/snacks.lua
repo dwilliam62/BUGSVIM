@@ -38,7 +38,9 @@ return {
     },
     picker = {
       enabled = true,
-      files = { cmd = 'rg' },
+      files = {
+        cmd = { 'rg', '--files', '--hidden', '--glob', '!.git/*' },
+      },
     },
     quickfile = { enabled = true },
     scope = { enabled = true },
