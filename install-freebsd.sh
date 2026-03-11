@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # ================================================================================================
 # bugsvim - Installation Script for FreeBSD
 # ================================================================================================
@@ -98,7 +98,7 @@ if ! command -v nvim &> /dev/null; then
   exit 1
 fi
 
-NVIM_VERSION=$(nvim --version | head -1 | grep -oP 'NVIM v\K[^\s]+')
+NVIM_VERSION=$(nvim --version | head -1 | sed -E 's/^NVIM v([^[:space:]]+).*/\1/')
 echo -e "${GREEN}✓ NeoVim version: $NVIM_VERSION${NC}"
 
 # Check if version is 0.10 or higher
