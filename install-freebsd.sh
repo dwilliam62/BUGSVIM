@@ -260,7 +260,9 @@ echo -e "${BLUE}Step 9: Optional - Install lua-language-server from ports${NC}"
 read -p "Install lua-language-server from ports? (y/n) " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-  if [ -d /usr/ports/devel/lua-language-server ]; then
+  if pkg info -e lua-language-server >/dev/null 2>&1; then
+    echo -e "${GREEN}✓ lua-language-server already installed${NC}"
+  elif [ -d /usr/ports/devel/lua-language-server ]; then
     echo -e "${BLUE}Building lua-language-server from ports...${NC}"
     if (cd /usr/ports/devel/lua-language-server && run_as_root make install clean); then
       echo -e "${GREEN}✓ lua-language-server installed${NC}"
