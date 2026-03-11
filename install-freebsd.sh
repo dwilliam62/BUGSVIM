@@ -168,7 +168,7 @@ run_as_root pkg install -y \
   py3-pip \
   node \
   npm \
-  FreeBSD-clang-15.0 \
+  llvm \
   bash || true
 
 echo -e "${BLUE}Step 3b: Configuring npm for user installs...${NC}"
@@ -193,8 +193,8 @@ echo -e "${BLUE}Step 4: Installing formatters...${NC}"
 echo -e "${BLUE}  Installing shfmt...${NC}"
 run_as_root pkg install -y shfmt || echo -e "${YELLOW}Warning: shfmt not available${NC}"
 
-echo -e "${BLUE}  Installing clang-format (via clang)...${NC}"
-run_as_root pkg install -y FreeBSD-clang-15.0 || echo -e "${YELLOW}Warning: clang not available${NC}"
+echo -e "${BLUE}  Installing clang-format (via llvm)...${NC}"
+run_as_root pkg install -y llvm || echo -e "${YELLOW}Warning: llvm not available${NC}"
 
 echo -e "${BLUE}  Installing stylua (via pkg) and prettier (via npm)...${NC}"
 run_as_root pkg install -y stylua || echo -e "${YELLOW}Warning: stylua not available${NC}"
