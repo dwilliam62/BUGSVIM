@@ -154,7 +154,7 @@ run_as_root pkg install -y \
   neovim \
   git \
   ripgrep \
-  fd \
+  fd-find \
   curl \
   base64 \
   gmake \
