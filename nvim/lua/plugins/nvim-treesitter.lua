@@ -33,7 +33,6 @@ return {
           'dockerfile',
           'toml',
           'json',
-          'java',
           'go',
           'gitignore',
           'yaml',

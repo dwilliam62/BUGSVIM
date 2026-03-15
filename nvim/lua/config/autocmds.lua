@@ -46,13 +46,6 @@ vim.api.nvim_create_autocmd('LspAttach', {
   callback = on_attach,
 })
 
--- For starting or attaching jdtls server
-vim.api.nvim_create_autocmd('FileType', {
-  pattern = 'java',
-  callback = function(args)
-    require('servers.jdtls').setup()
-  end,
-})
 
 -- Pretty lsp progress notification
 ---@type table<number, {token:lsp.ProgressToken, msg:string, done:boolean}[]>
