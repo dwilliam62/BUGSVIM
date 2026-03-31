@@ -22,6 +22,19 @@ function Confirm-Action($Prompt) {
     $reply = Read-Host $Prompt
     return $reply -match '^[Yy]'
 }
+function Add-ToPath($NewPath, $Scope = 'User') {
+    if (-not (Test-Path $NewPath)) { return }
+    $current = [Environment]::GetEnvironmentVariable('Path', $Scope)
+    if ([string]::IsNullOrEmpty($current)) { $current = '' }
+    $parts = $current.Split(';') | Where-Object { $_ -ne '' }
+    if ($parts -notcontains $NewPath) {
+        $updated = ($parts + $NewPath) -join ';'
+        [Environment]::SetEnvironmentVariable('Path', $updated, $Scope)
+    }
+    if ($env:Path.Split(';') -notcontains $NewPath) {
+        $env:Path = $env:Path + ';' + $NewPath
+    }
+}
 
 Write-Info '==============================================================='
 Write-Info '  bugsvim - Windows Installation (PowerShell)'
@@ -86,6 +99,72 @@ Write-Ok "OK: bugsvim config copied to $configDir"
 
 if ($InstallDeps) {
     Write-Info 'Installing dependencies (winget/npm/pip)...'
+    if (-not (Test-Command 'gcc') -or -not (Test-Command 'make')) {
+        Write-Info 'Installing build tools (gcc/make) via MSYS2...'
+        if (-not (Test-Path 'C:\msys64\usr\bin\bash.exe')) {
+            if (Test-Command 'winget') {
+                try {
+                    winget install --id MSYS2.MSYS2 -e --source winget --accept-source-agreements --accept-package-agreements | Out-Null
+                    Write-Ok 'OK: Installed MSYS2'
+                } catch {
+                    Write-Warn 'WARN: Failed to install MSYS2'
+                }
+            } else {
+                Write-Warn 'WARN: winget not found; cannot install MSYS2'
+            }
+        }
+
+        if (Test-Path 'C:\msys64\usr\bin\bash.exe') {
+            try {
+                C:\msys64\usr\bin\bash.exe -lc "pacman -Syu --noconfirm"
+            } catch {
+                Write-Warn 'WARN: MSYS2 update may have required a restart; continuing'
+            }
+            try {
+                C:\msys64\usr\bin\bash.exe -lc "pacman -S --needed --noconfirm base-devel mingw-w64-x86_64-toolchain"
+                Write-Ok 'OK: Installed MSYS2 build toolchain'
+            } catch {
+                Write-Warn 'WARN: Failed to install MSYS2 build toolchain'
+            }
+            Add-ToPath 'C:\msys64\mingw64\bin'
+            Add-ToPath 'C:\msys64\usr\bin'
+        }
+    }
+
+    if (-not (Test-Command 'zig')) {
+        Write-Info 'Installing Zig via winget...'
+        if (Test-Command 'winget') {
+            try {
+                winget install --id zig.zig -e --source winget --accept-source-agreements --accept-package-agreements --scope machine | Out-Null
+                Write-Ok 'OK: Installed Zig'
+            } catch {
+                Write-Warn 'WARN: Failed to install Zig (try running as Administrator)'
+            }
+        } else {
+            Write-Warn 'WARN: winget not found; cannot install Zig'
+        }
+    }
+    if (Test-Path 'C:\Program Files\LLVM\bin') {
+        Add-ToPath 'C:\Program Files\LLVM\bin'
+    }
+    if (-not (Test-Command 'zig')) {
+        $zigLocations = @(
+            'C:\Program Files\Zig',
+            'C:\Program Files (x86)\Zig'
+        )
+        foreach ($loc in $zigLocations) {
+            if (Test-Path (Join-Path $loc 'zig.exe')) {
+                Add-ToPath $loc
+            }
+        }
+        $wingetZig = Get-ChildItem -Path "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\zig.zig*" -Directory -ErrorAction SilentlyContinue |
+            ForEach-Object { Join-Path $_.FullName 'zig.exe' } |
+            Where-Object { Test-Path $_ } |
+            Select-Object -First 1
+        if ($wingetZig) {
+            Add-ToPath (Split-Path -Parent $wingetZig)
+        }
+    }
 
     if (Test-Command 'winget') {
         $wingetPkgs = @(
@@ -160,7 +239,8 @@ if (-not $SkipVerify) {
     $commands = @(
         'git', 'rg', 'fd', 'node', 'npm', 'python',
         'clangd', 'lua-language-server', 'pyright', 'ruff',
-        'stylua', 'shfmt', 'clang-format', 'prettier', 'prettierd'
+        'stylua', 'shfmt', 'clang-format', 'prettier', 'prettierd',
+        'gcc', 'make', 'zig'
     )
     foreach ($cmd in $commands) {
         if (Test-Command $cmd) {
