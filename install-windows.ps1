@@ -23,9 +23,9 @@ function Confirm-Action($Prompt) {
     return $reply -match '^[Yy]'
 }
 
-Write-Info '╔════════════════════════════════════════════════════════════════╗'
-Write-Info '║   bugsvim - Windows Installation (PowerShell)                  ║'
-Write-Info '╚════════════════════════════════════════════════════════════════╝'
+Write-Info '==============================================================='
+Write-Info '  bugsvim - Windows Installation (PowerShell)'
+Write-Info '==============================================================='
 Write-Host ''
 
 if (-not $IsWindows) {
@@ -61,7 +61,7 @@ if ($hasConfig) {
             if (Test-Path $dataDir) {
                 Copy-Item -Path $dataDir -Destination (Join-Path $backupDir 'nvim-data') -Recurse -Force
             }
-            Write-Ok "✓ Backup created: $backupDir"
+            Write-Ok "OK: Backup created: $backupDir"
         } else {
             Write-Warn 'Skipping backup'
         }
@@ -71,18 +71,18 @@ if ($hasConfig) {
         Write-Info 'Removing existing NeoVim config and data...'
         if (Test-Path $configDir) { Remove-Item -Path $configDir -Recurse -Force }
         if (Test-Path $dataDir) { Remove-Item -Path $dataDir -Recurse -Force }
-        Write-Ok '✓ Existing config and data removed'
+        Write-Ok 'OK: Existing config and data removed'
     } else {
         Write-Warn 'Skipping removal of existing config/data'
     }
 } else {
-    Write-Ok '✓ No existing NeoVim configuration found'
+    Write-Ok 'OK: No existing NeoVim configuration found'
 }
 
 Write-Info 'Copying bugsvim config to LocalAppData...'
 New-Item -ItemType Directory -Path $configDir -Force | Out-Null
 Copy-Item -Path $sourceConfig\* -Destination $configDir -Recurse -Force
-Write-Ok "✓ bugsvim config copied to $configDir"
+Write-Ok "OK: bugsvim config copied to $configDir"
 
 if ($InstallDeps) {
     Write-Info 'Installing dependencies (winget/npm/pip)...'
@@ -102,9 +102,9 @@ if ($InstallDeps) {
             Write-Info "Installing $pkg via winget..."
             try {
                 winget install --id $pkg -e --source winget --accept-source-agreements --accept-package-agreements | Out-Null
-                Write-Ok "✓ Installed $pkg"
+                Write-Ok "OK: Installed $pkg"
             } catch {
-                Write-Warn "⚠ Failed to install $pkg"
+                Write-Warn "WARN: Failed to install $pkg"
             }
         }
     } else {
@@ -124,9 +124,9 @@ if ($InstallDeps) {
             Write-Info "Installing $pkg via npm..."
             try {
                 npm install -g $pkg | Out-Null
-                Write-Ok "✓ Installed $pkg"
+                Write-Ok "OK: Installed $pkg"
             } catch {
-                Write-Warn "⚠ Failed to install $pkg"
+                Write-Warn "WARN: Failed to install $pkg"
             }
         }
     } else {
@@ -137,9 +137,9 @@ if ($InstallDeps) {
         Write-Info 'Installing ruff and pyright via pip...'
         try {
             python -m pip install --user ruff pyright | Out-Null
-            Write-Ok '✓ Installed ruff and pyright'
+            Write-Ok 'OK: Installed ruff and pyright'
         } catch {
-            Write-Warn '⚠ Failed to install ruff/pyright'
+            Write-Warn 'WARN: Failed to install ruff/pyright'
         }
     } else {
         Write-Warn 'python not found; skipping pip packages'
@@ -152,9 +152,9 @@ if (-not $SkipVerify) {
 
     if (Test-Command 'nvim') {
         $verLine = & nvim --version | Select-Object -First 1
-        Write-Ok "✓ $verLine"
+        Write-Ok "OK: $verLine"
     } else {
-        Write-Warn '⚠ nvim not found in PATH'
+        Write-Warn 'WARN: nvim not found in PATH'
     }
 
     $commands = @(
@@ -164,9 +164,9 @@ if (-not $SkipVerify) {
     )
     foreach ($cmd in $commands) {
         if (Test-Command $cmd) {
-            Write-Ok "✓ $cmd"
+            Write-Ok "OK: $cmd"
         } else {
-            Write-Warn "⚠ $cmd (missing)"
+            Write-Warn "WARN: $cmd (missing)"
         }
     }
 }
