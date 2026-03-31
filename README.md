@@ -103,6 +103,14 @@ cd ~/.config/bugsvim
 bash install-fedora.sh
 ```
 
+#### Windows (PowerShell)
+
+```powershell
+git clone https://github.com/dwilliam62/bugsvim $env:LOCALAPPDATA\bugsvim
+Set-Location $env:LOCALAPPDATA\bugsvim
+.\install-windows.ps1
+```
+
 **The installation scripts will:**
 
 - Detect your distribution

@@ -21,6 +21,18 @@ bash install-debian.sh
 bash install-fedora.sh
 ```
 
+### Windows (PowerShell)
+
+```powershell
+.\install-windows.ps1
+```
+
+Install dependencies as well:
+
+```powershell
+.\install-windows.ps1 -InstallDeps
+```
+
 These scripts will:
 - Detect your distribution
 - Install all packages and language servers

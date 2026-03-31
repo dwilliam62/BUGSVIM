@@ -1,6 +1,6 @@
 # bugsvim Installation Scripts
 
-Automated installation scripts for bugsvim on Arch Linux, Debian/Ubuntu, and Fedora.
+Automated installation scripts for bugsvim on Arch Linux, Debian/Ubuntu, Fedora, Windows, and FreeBSD.
 
 ## Quick Start
 
@@ -22,6 +22,12 @@ bash install-debian.sh
 
 ```bash
 bash install-fedora.sh
+```
+
+### Windows (PowerShell)
+
+```powershell
+.\install-windows.ps1
 ```
 
 ### FreeBSD
@@ -51,6 +57,11 @@ Each script performs the following steps in order:
 9. **Install Python Packages** - pip packages (ruff, pyright)
 10. **Optional: Build hyprls** - Prompts to build Hyprland LSP from source (Debian/Fedora only)
 11. **Verify Installation** - Checks all components are installed and accessible
+
+**Windows script notes (`install-windows.ps1`):**
+- Backs up `%LOCALAPPDATA%\nvim` and `%LOCALAPPDATA%\nvim-data`
+- Copies the config to `%LOCALAPPDATA%\nvim`
+- Optional dependency install via `winget`, `npm`, and `pip` using `-InstallDeps`
 
 ## Distro-Specific Notes
 
@@ -185,6 +196,18 @@ bash install-arch.sh
 ```bash
 # Run Debian script on Ubuntu - will ask for confirmation
 bash install-debian.sh
+```
+
+### Windows (PowerShell)
+
+```powershell
+.\install-windows.ps1
+```
+
+Install dependencies as well:
+
+```powershell
+.\install-windows.ps1 -InstallDeps
 ```
 
 ### Skip hyprls build (Debian/Fedora)
