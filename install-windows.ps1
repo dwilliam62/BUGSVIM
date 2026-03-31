@@ -62,6 +62,11 @@ Write-Info 'Checking existing NeoVim configuration...'
 $hasConfig = (Test-Path $configDir) -or (Test-Path $dataDir)
 
 if ($hasConfig) {
+    try {
+        Stop-Process -Name nvim -Force -ErrorAction SilentlyContinue
+    } catch {
+        Write-Warn 'WARN: Failed to stop running nvim processes'
+    }
     if (-not $NoBackup) {
         if (Confirm-Action 'Backup existing config? (y/n)') {
             $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
@@ -82,9 +87,21 @@ if ($hasConfig) {
 
     if (-not $SkipRemove) {
         Write-Info 'Removing existing NeoVim config and data...'
-        if (Test-Path $configDir) { Remove-Item -Path $configDir -Recurse -Force }
-        if (Test-Path $dataDir) { Remove-Item -Path $dataDir -Recurse -Force }
-        Write-Ok 'OK: Existing config and data removed'
+        if (Test-Path $configDir) {
+            try {
+                Remove-Item -Path $configDir -Recurse -Force -ErrorAction Stop
+            } catch {
+                Write-Warn "WARN: Failed to remove $configDir (files may be in use)"
+            }
+        }
+        if (Test-Path $dataDir) {
+            try {
+                Remove-Item -Path $dataDir -Recurse -Force -ErrorAction Stop
+            } catch {
+                Write-Warn "WARN: Failed to remove $dataDir (files may be in use)"
+            }
+        }
+        Write-Ok 'OK: Cleanup attempted'
     } else {
         Write-Warn 'Skipping removal of existing config/data'
     }
@@ -184,6 +201,17 @@ if ($InstallDeps) {
                 Write-Ok "OK: Installed $pkg"
             } catch {
                 Write-Warn "WARN: Failed to install $pkg"
+            }
+        }
+
+        if (-not (Test-Command 'fd')) {
+            $fdExe = Get-ChildItem -Path "$env:LOCALAPPDATA\Microsoft\WinGet\Packages" -Recurse -Filter fd.exe -ErrorAction SilentlyContinue |
+                Select-Object -First 1 -ExpandProperty FullName
+            if ($fdExe) {
+                Add-ToPath (Split-Path -Parent $fdExe)
+                if (Test-Command 'fd') {
+                    Write-Ok 'OK: fd is now on PATH'
+                }
             }
         }
     } else {
