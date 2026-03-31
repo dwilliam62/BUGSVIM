@@ -191,7 +191,8 @@ if ($InstallDeps) {
             'sharkdp.fd',
             'OpenJS.NodeJS.LTS',
             'Python.Python.3.12',
-            'LLVM.LLVM'
+            'LLVM.LLVM',
+            'LuaLS.lua-language-server'
         )
 
         foreach ($pkg in $wingetPkgs) {
@@ -223,7 +224,6 @@ if ($InstallDeps) {
             '@fsouza/prettierd',
             'vscode-langservers-extracted',
             'bash-language-server',
-            'lua-language-server',
             '@johnnymorganz/stylua-bin',
             'prettier'
         )
@@ -240,16 +240,29 @@ if ($InstallDeps) {
         Write-Warn 'npm not found; skipping npm packages'
     }
 
+    Write-Info 'Installing ruff and pyright via pip...'
+    $pipInstalled = $false
     if (Test-Command 'python') {
-        Write-Info 'Installing ruff and pyright via pip...'
         try {
             python -m pip install --user ruff pyright | Out-Null
-            Write-Ok 'OK: Installed ruff and pyright'
+            $pipInstalled = $true
         } catch {
-            Write-Warn 'WARN: Failed to install ruff/pyright'
+            $pipInstalled = $false
+        }
+    } elseif (Test-Command 'py') {
+        try {
+            py -m pip install --user ruff pyright | Out-Null
+            $pipInstalled = $true
+        } catch {
+            $pipInstalled = $false
         }
     } else {
-        Write-Warn 'python not found; skipping pip packages'
+        Write-Warn 'WARN: python not found; skipping pip packages'
+    }
+    if ($pipInstalled) {
+        Write-Ok 'OK: Installed ruff and pyright'
+    } else {
+        Write-Warn 'WARN: Failed to install ruff/pyright'
     }
 }
 
