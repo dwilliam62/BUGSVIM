@@ -20,6 +20,10 @@ bash install-debian.sh
 ```bash
 bash install-fedora.sh
 ```
+### OpenSUSE
+```bash
+bash install-opensuse.sh
+```
 
 ### Windows (PowerShell)
 
