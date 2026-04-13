@@ -7,6 +7,11 @@
 
 # 🚀 **Current Release - v1.0.3**
 
+#### 📅 **Updated: April 13th, 2026**
+
+- Added:
+  - Install script for Bazzite linux
+
 #### 📅 **Updated: January 16th, 2026**
 
 - Added:
