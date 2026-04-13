@@ -285,20 +285,35 @@ else
 fi
 
 echo -e "${BLUE}Step 3: Installing language servers...${NC}"
-if pkg_install \
-    lua \
-    luarocks \
-    python3-devel \
-    python3-pip \
-    nodejs \
-    npm \
-    clang \
-    clang-tools-extra \
-    rust; then
-    [ "$USE_BREW" -eq 0 ] && REBOOT_REQUIRED=1
+if [ "$USE_BREW" -eq 1 ]; then
+    if pkg_install \
+        lua \
+        luarocks \
+        python \
+        node \
+        llvm \
+        rust; then
+        :
+    else
+        FAILED_PACKAGES+=("language-servers")
+        echo -e "${YELLOW}Warning: language server package install failed${NC}"
+    fi
 else
-    FAILED_PACKAGES+=("language-servers")
-    echo -e "${YELLOW}Warning: language server package install failed${NC}"
+    if pkg_install \
+        lua \
+        luarocks \
+        python3-devel \
+        python3-pip \
+        nodejs \
+        npm \
+        clang \
+        clang-tools-extra \
+        rust; then
+        REBOOT_REQUIRED=1
+    else
+        FAILED_PACKAGES+=("language-servers")
+        echo -e "${YELLOW}Warning: language server package install failed${NC}"
+    fi
 fi
 
 echo -e "${BLUE}Step 3b: Configuring npm for user installs...${NC}"
@@ -314,31 +329,50 @@ fi
 echo -e "${BLUE}Step 4: Installing formatters...${NC}"
 
 echo -e "${BLUE}  Installing shfmt and clang-format...${NC}"
-if ! pkg_install shfmt clang-tools-extra; then
-    echo -e "${YELLOW}Warning: shfmt/clang-tools-extra not available${NC}"
-    FAILED_PACKAGES+=("shfmt" "clang-tools-extra")
+if [ "$USE_BREW" -eq 1 ]; then
+    if ! pkg_install shfmt clang-format; then
+        echo -e "${YELLOW}Warning: shfmt/clang-format not available${NC}"
+        FAILED_PACKAGES+=("shfmt" "clang-format")
+    fi
 else
-    [ "$USE_BREW" -eq 0 ] && REBOOT_REQUIRED=1
+    if ! pkg_install shfmt clang-tools-extra; then
+        echo -e "${YELLOW}Warning: shfmt/clang-tools-extra not available${NC}"
+        FAILED_PACKAGES+=("shfmt" "clang-tools-extra")
+    else
+        REBOOT_REQUIRED=1
+    fi
 fi
 
 echo -e "${BLUE}  Installing stylua and prettier via npm...${NC}"
-if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed @johnnymorganz/stylua-bin; then
-    npm install -g @johnnymorganz/stylua-bin || echo -e "${YELLOW}Warning: stylua install failed${NC}"
+if command -v npm &> /dev/null; then
+    if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed @johnnymorganz/stylua-bin; then
+        npm install -g @johnnymorganz/stylua-bin || echo -e "${YELLOW}Warning: stylua install failed${NC}"
+    else
+        echo -e "${GREEN}✓ stylua already installed${NC}"
+    fi
+    if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed prettier; then
+        npm install -g prettier || echo -e "${YELLOW}Warning: prettier install failed${NC}"
+    else
+        echo -e "${GREEN}✓ prettier already installed${NC}"
+    fi
 else
-    echo -e "${GREEN}✓ stylua already installed${NC}"
-fi
-if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed prettier; then
-    npm install -g prettier || echo -e "${YELLOW}Warning: prettier install failed${NC}"
-else
-    echo -e "${GREEN}✓ prettier already installed${NC}"
+    echo -e "${RED}✗${NC} npm not available - skipping stylua/prettier installs"
+    FAILED_NPM+=("@johnnymorganz/stylua-bin" "prettier")
 fi
 
 echo -e "${BLUE}Step 5: Installing optional convenience tools...${NC}"
-pkg_install \
-    lazygit \
-    bat \
-    wl-clipboard || true
-[ "$USE_BREW" -eq 0 ] && REBOOT_REQUIRED=1
+if [ "$USE_BREW" -eq 1 ]; then
+    pkg_install \
+        lazygit \
+        bat \
+        clipboard || true
+else
+    pkg_install \
+        lazygit \
+        bat \
+        wl-clipboard || true
+    REBOOT_REQUIRED=1
+fi
 
 echo -e "${BLUE}Step 6: Installing npm global packages...${NC}"
 if command -v npm &> /dev/null; then
