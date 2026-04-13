@@ -49,9 +49,55 @@ if command -v brew >/dev/null 2>&1; then
     USE_BREW=1
 fi
 
+brew_cmd_for_pkg() {
+    case "$1" in
+        neovim) echo "nvim" ;;
+        git) echo "git" ;;
+        ripgrep) echo "rg" ;;
+        fd) echo "fd" ;;
+        curl) echo "curl" ;;
+        pkg-config) echo "pkg-config" ;;
+        gcc) echo "gcc" ;;
+        make) echo "make" ;;
+        automake) echo "automake" ;;
+        autoconf) echo "autoconf" ;;
+        lua) echo "lua" ;;
+        luarocks) echo "luarocks" ;;
+        python3-devel|python3-pip) echo "python3" ;;
+        nodejs) echo "node" ;;
+        npm) echo "npm" ;;
+        clang) echo "clang" ;;
+        clang-tools-extra) echo "clang-format" ;;
+        rust) echo "rustc" ;;
+        shfmt) echo "shfmt" ;;
+        lazygit) echo "lazygit" ;;
+        bat) echo "bat" ;;
+        wl-clipboard) echo "wl-copy" ;;
+        golang) echo "go" ;;
+        *) echo "" ;;
+    esac
+}
+
+brew_install_missing() {
+    local to_install=()
+    local pkg cmd
+    for pkg in "$@"; do
+        cmd=$(brew_cmd_for_pkg "$pkg")
+        if [ -n "$cmd" ] && command -v "$cmd" >/dev/null 2>&1; then
+            echo -e "${GREEN}✓ $pkg already available (${cmd})${NC}"
+        else
+            to_install+=("$pkg")
+        fi
+    done
+    if [ ${#to_install[@]} -eq 0 ]; then
+        return 0
+    fi
+    brew install "${to_install[@]}"
+}
+
 pkg_install() {
     if [ "$USE_BREW" -eq 1 ]; then
-        brew install "$@"
+        brew_install_missing "$@"
     else
         sudo rpm-ostree install -y "$@"
     fi
@@ -86,6 +132,23 @@ hyprls_version() {
 
 npm_pkg_installed() {
     command -v npm >/dev/null 2>&1 && npm list -g "$1" >/dev/null 2>&1
+}
+
+npm_pkg_or_cmd_installed() {
+    local pkg="$1"
+    local cmd="$2"
+    if [ -n "$cmd" ] && command -v "$cmd" >/dev/null 2>&1; then
+        return 0
+    fi
+    npm_pkg_installed "$pkg"
+}
+
+python_pkg_or_cmd_installed() {
+    local cmd="$1"
+    if command -v "$cmd" >/dev/null 2>&1; then
+        return 0
+    fi
+    python3 -m pip show "$cmd" &>/dev/null
 }
 
 # ================================================================================================
@@ -279,17 +342,17 @@ pkg_install \
 
 echo -e "${BLUE}Step 6: Installing npm global packages...${NC}"
 if command -v npm &> /dev/null; then
-    if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed @fsouza/prettierd; then
+    if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_or_cmd_installed @fsouza/prettierd prettierd; then
         npm install -g @fsouza/prettierd || FAILED_NPM+=("@fsouza/prettierd")
     else
         echo -e "${GREEN}✓ @fsouza/prettierd already installed${NC}"
     fi
-    if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed vscode-langservers-extracted; then
+    if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_or_cmd_installed vscode-langservers-extracted vscode-html-language-server; then
         npm install -g vscode-langservers-extracted || FAILED_NPM+=("vscode-langservers-extracted")
     else
         echo -e "${GREEN}✓ vscode-langservers-extracted already installed${NC}"
     fi
-    if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed neovim; then
+    if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_or_cmd_installed neovim neovim-node-host; then
         npm install -g neovim || FAILED_NPM+=("neovim")
     else
         echo -e "${GREEN}✓ neovim (npm) already installed${NC}"
@@ -304,7 +367,7 @@ fi
 
 echo -e "${BLUE}Step 7: Installing Python packages...${NC}"
 PYTHON_INSTALLED=0
-if [ "$FORCE_REINSTALL" -ne 1 ] && command -v ruff >/dev/null 2>&1 && command -v pyright >/dev/null 2>&1; then
+if [ "$FORCE_REINSTALL" -ne 1 ] && python_pkg_or_cmd_installed ruff && python_pkg_or_cmd_installed pyright; then
     PYTHON_INSTALLED=1
 elif command -v pip3 &> /dev/null; then
     pip3 install --user --break-system-packages ruff pyright 2>/dev/null && PYTHON_INSTALLED=1
