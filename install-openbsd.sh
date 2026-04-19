@@ -164,7 +164,7 @@ echo -e "${BLUE}Step 3: Installing language runtimes and tools...${NC}"
 run_as_root pkg_add \
   lua \
   luarocks--lua51 \
-  python3 \
+  python%3 \
   py3-pip \
   node \
   npm \
