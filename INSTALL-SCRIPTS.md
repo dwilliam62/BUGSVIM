@@ -44,6 +44,12 @@ bash install-freebsd.sh
 > Note: FreeBSD only tested with FreeBSD v15.0
 > Script isn't complete but functions.
 
+### OpenBSD
+
+```bash
+bash install-openbsd.sh
+```
+
 ## What the Scripts Do
 
 Each script performs the following steps in order:
