@@ -179,6 +179,7 @@ fi
 echo -e "${BLUE}Step 3c: Setting up COPRs for additional packages...${NC}"
 sudo dnf copr enable -y relativesure/all-packages || echo -e "${YELLOW}Warning: COPR enable failed (may already be enabled)${NC}"
 sudo dnf copr enable -y atim/lazygit || echo -e "${YELLOW}Warning: lazygit COPR enable failed${NC}"
+sudo dnf copr enable -y yorickpeterse/stylua || echo -e "${YELLOW}Warning: stylua COPR enable failed${NC}"
 
 echo -e "${BLUE}Step 3d: Installing language servers...${NC}"
 
@@ -199,6 +200,8 @@ sudo dnf install -y shfmt || echo -e "${YELLOW}Warning: shfmt not available${NC}
 
 echo -e "${BLUE}  Installing clang-format (via clang-tools-extra)...${NC}"
 sudo dnf install -y clang-tools-extra || echo -e "${YELLOW}Warning: clang-tools-extra not available${NC}"
+echo -e "${BLUE}  Installing stylua...${NC}"
+sudo dnf install -y stylua || echo -e "${YELLOW}Warning: stylua not available${NC}"
 
 echo -e "${BLUE}  Installing stylua and prettier via npm...${NC}"
 if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed @johnnymorganz/stylua-bin; then
