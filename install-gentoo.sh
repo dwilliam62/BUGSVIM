@@ -81,6 +81,96 @@ ensure_eselect_repository() {
   fi
 }
 
+parse_nvim_semver() {
+  local ver="$1"
+  local a b c
+  ver="${ver#v}"
+  IFS='.' read -r a b c <<<"$ver"
+  a="${a:-0}"
+  b="${b:-0}"
+  c="${c:-0}"
+
+  if [[ "$a" -eq 0 ]]; then
+    printf '%s %s %s\n' "$b" "$c" "0"
+  else
+    printf '%s %s %s\n' "$a" "$b" "$c"
+  fi
+}
+
+discover_neovim_11_atom() {
+  local ebuild_dir="/var/db/repos/gentoo/app-editors/neovim"
+  local version=""
+  local latest_011 latest_11
+
+  if [[ -d "$ebuild_dir" ]]; then
+    latest_011="$(find "$ebuild_dir" -maxdepth 1 -type f -name 'neovim-0.11*.ebuild' -printf '%f\n' 2>/dev/null | sed -E 's/^neovim-(.+)\.ebuild$/\1/' | sort -V | tail -n1)"
+    latest_11="$(find "$ebuild_dir" -maxdepth 1 -type f -name 'neovim-11*.ebuild' -printf '%f\n' 2>/dev/null | sed -E 's/^neovim-(.+)\.ebuild$/\1/' | sort -V | tail -n1)"
+    version="${latest_011:-$latest_11}"
+  fi
+
+  if [[ -n "$version" ]]; then
+    printf '=app-editors/neovim-%s\n' "$version"
+    return 0
+  fi
+
+  printf 'app-editors/neovim\n'
+  return 0
+}
+
+ensure_neovim_11x() {
+  local nvim_version="" major minor patch target_atom
+  local needs_install=0
+  local reason=""
+
+  echo -e "${BLUE}Checking NeoVim version...${NC}"
+  if command -v nvim >/dev/null 2>&1; then
+    nvim_version="$(nvim --version | head -1 | grep -oP 'NVIM v\K[^\s]+' || true)"
+    if [[ -z "$nvim_version" ]]; then
+      needs_install=1
+      reason="unable to parse installed NeoVim version"
+    else
+      read -r major minor patch <<<"$(parse_nvim_semver "$nvim_version")"
+      if [[ "$major" -eq 11 ]]; then
+        echo -e "${GREEN}✓ NeoVim version: ${nvim_version} (supported)${NC}"
+        return 0
+      fi
+      needs_install=1
+      if [[ "$major" -ge 12 ]]; then
+        reason="NeoVim ${nvim_version} detected (12.x+ unsupported by bugsvim)"
+      else
+        reason="NeoVim ${nvim_version} detected (requires 11.x)"
+      fi
+    fi
+  else
+    needs_install=1
+    reason="NeoVim is not installed"
+  fi
+
+  if [[ "$needs_install" -eq 1 ]]; then
+    echo -e "${YELLOW}Note: ${reason}${NC}"
+    target_atom="$(discover_neovim_11_atom)"
+    echo -e "${BLUE}Installing supported NeoVim release (${target_atom})...${NC}"
+    if ! sudo emerge --ask=n --oneshot --autounmask-write --autounmask-continue --binpkg-respect-use=y "$target_atom"; then
+      echo -e "${RED}✗ Failed to install ${target_atom}${NC}"
+      echo -e "${RED}Please install NeoVim 11.x manually and rerun this script.${NC}"
+      exit 1
+    fi
+  fi
+
+  nvim_version="$(nvim --version | head -1 | grep -oP 'NVIM v\K[^\s]+' || true)"
+  if [[ -z "$nvim_version" ]]; then
+    echo -e "${RED}✗ Unable to verify NeoVim version after installation${NC}"
+    exit 1
+  fi
+  read -r major minor patch <<<"$(parse_nvim_semver "$nvim_version")"
+  if [[ "$major" -ne 11 ]]; then
+    echo -e "${RED}✗ NeoVim 11.x is required, but found: ${nvim_version}${NC}"
+    echo -e "${RED}Your current repos may not provide a 11.x build right now.${NC}"
+    exit 1
+  fi
+  echo -e "${GREEN}✓ NeoVim version: ${nvim_version} (supported)${NC}"
+}
+
 enable_repo() {
   local repo="$1"
   local sync_type="${2:-}"
@@ -178,28 +268,7 @@ echo -e "${BLUE}║   bugsvim - Gentoo Linux Installation${NC}"
 echo -e "${BLUE}╚════════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
-# Check NeoVim version
-echo -e "${BLUE}Checking NeoVim version...${NC}"
-if ! command -v nvim &>/dev/null; then
-  echo -e "${RED}✗ NeoVim is not installed${NC}"
-  echo -e "${RED}This configuration requires NeoVim to be installed first${NC}"
-  echo -e "${RED}Install NeoVim with: sudo emerge app-editors/neovim${NC}"
-  exit 1
-fi
-
-NVIM_VERSION=$(nvim --version | head -1 | grep -oP 'NVIM v\K[^\s]+')
-echo -e "${GREEN}✓ NeoVim version: $NVIM_VERSION${NC}"
-
-# Check if version is 0.10 or higher
-MAJOR=$(echo $NVIM_VERSION | cut -d. -f1)
-MINOR=$(echo $NVIM_VERSION | cut -d. -f2)
-
-if [ "$MAJOR" -lt 0 ] || ([ "$MAJOR" -eq 0 ] && [ "$MINOR" -lt 10 ]); then
-  echo -e "${RED}✗ NeoVim version 0.10 or higher is required${NC}"
-  echo -e "${RED}Current version: $NVIM_VERSION${NC}"
-  echo -e "${YELLOW}Please upgrade NeoVim: sudo emerge --update app-editors/neovim${NC}"
-  exit 1
-fi
+ensure_neovim_11x
 
 echo ""
 
