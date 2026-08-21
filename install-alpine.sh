@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/emv bash
 # ================================================================================================
 # bugsvim - Installation Script for Alpine Linux
 # ================================================================================================
@@ -34,9 +34,16 @@ EOF
 
 for arg in "$@"; do
   case "$arg" in
-    -f|--force) FORCE_REINSTALL=1 ;;
-    -h|--help) usage; exit 0 ;;
-    *) echo "Unknown option: $arg"; usage; exit 1 ;;
+  -f | --force) FORCE_REINSTALL=1 ;;
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  *)
+    echo "Unknown option: $arg"
+    usage
+    exit 1
+    ;;
   esac
 done
 
@@ -148,7 +155,6 @@ run_as_root apk update || true
 
 echo -e "${BLUE}Step 2: Installing core dependencies...${NC}"
 run_as_root apk add --no-interactive \
-  neovim \
   git \
   ripgrep \
   fd \
@@ -324,23 +330,23 @@ echo -e "${GREEN}✓ bugsvim config copied to ~/.config/nvim${NC}"
 echo -e "${BLUE}Step 10: Configuring shell PATH for npm...${NC}"
 CURRENT_SHELL=$(basename "$SHELL")
 case "$CURRENT_SHELL" in
-  zsh)
-    SHELL_CONFIG="${HOME}/.zshrc"
-    NPM_PATH_LINE="export PATH=\"$HOME/.npm-global/bin:\$PATH\""
-    ;;
-  bash)
-    SHELL_CONFIG="${HOME}/.bashrc"
-    NPM_PATH_LINE="export PATH=\"$HOME/.npm-global/bin:\$PATH\""
-    ;;
-  fish)
-    SHELL_CONFIG="${HOME}/.config/fish/config.fish"
-    NPM_PATH_LINE="set -gx PATH \$HOME/.npm-global/bin \$PATH"
-    ;;
-  *)
-    SHELL_CONFIG="${HOME}/.${CURRENT_SHELL}rc"
-    NPM_PATH_LINE="export PATH=\"$HOME/.npm-global/bin:\$PATH\""
-    echo -e "${YELLOW}Note: Detected shell '$CURRENT_SHELL' - using $SHELL_CONFIG${NC}"
-    ;;
+zsh)
+  SHELL_CONFIG="${HOME}/.zshrc"
+  NPM_PATH_LINE="export PATH=\"$HOME/.npm-global/bin:\$PATH\""
+  ;;
+bash)
+  SHELL_CONFIG="${HOME}/.bashrc"
+  NPM_PATH_LINE="export PATH=\"$HOME/.npm-global/bin:\$PATH\""
+  ;;
+fish)
+  SHELL_CONFIG="${HOME}/.config/fish/config.fish"
+  NPM_PATH_LINE="set -gx PATH \$HOME/.npm-global/bin \$PATH"
+  ;;
+*)
+  SHELL_CONFIG="${HOME}/.${CURRENT_SHELL}rc"
+  NPM_PATH_LINE="export PATH=\"$HOME/.npm-global/bin:\$PATH\""
+  echo -e "${YELLOW}Note: Detected shell '$CURRENT_SHELL' - using $SHELL_CONFIG${NC}"
+  ;;
 esac
 
 if [ -f "$SHELL_CONFIG" ]; then

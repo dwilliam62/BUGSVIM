@@ -34,9 +34,16 @@ EOF
 
 for arg in "$@"; do
   case "$arg" in
-    -f|--force) FORCE_REINSTALL=1 ;;
-    -h|--help) usage; exit 0 ;;
-    *) echo "Unknown option: $arg"; usage; exit 1 ;;
+  -f | --force) FORCE_REINSTALL=1 ;;
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  *)
+    echo "Unknown option: $arg"
+    usage
+    exit 1
+    ;;
   esac
 done
 
@@ -91,7 +98,7 @@ echo ""
 
 # Check NeoVim version
 echo -e "${BLUE}Checking NeoVim version...${NC}"
-if ! command -v nvim &> /dev/null; then
+if ! command -v nvim &>/dev/null; then
   echo -e "${RED}✗ NeoVim is not installed${NC}"
   echo -e "${RED}This configuration requires NeoVim to be installed first${NC}"
   echo -e "${RED}Install NeoVim with: sudo pkg install neovim${NC}"
@@ -151,7 +158,6 @@ run_as_root pkg update
 
 echo -e "${BLUE}Step 2: Installing core dependencies...${NC}"
 run_as_root pkg install -y \
-  neovim \
   git \
   ripgrep \
   fd-find \
@@ -172,7 +178,7 @@ run_as_root pkg install -y \
   bash || true
 
 echo -e "${BLUE}Step 3b: Configuring npm for user installs...${NC}"
-if ! command -v npm &> /dev/null; then
+if ! command -v npm &>/dev/null; then
   echo -e "${RED}✗${NC} npm not found - skipping npm configuration"
   FAILED_PACKAGES+=("npm")
 else
@@ -211,7 +217,7 @@ run_as_root pkg install -y \
   xclip || true
 
 echo -e "${BLUE}Step 6: Installing npm global packages...${NC}"
-if command -v npm &> /dev/null; then
+if command -v npm &>/dev/null; then
   if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed @fsouza/prettierd; then
     npm install -g @fsouza/prettierd || FAILED_NPM+=("@fsouza/prettierd")
   else
@@ -344,29 +350,29 @@ echo -e "${BLUE}Step 12: Configuring shell PATH for npm...${NC}"
 # Detect current shell
 CURRENT_SHELL=$(basename "$SHELL")
 case "$CURRENT_SHELL" in
-  zsh)
-    SHELL_CONFIG="${HOME}/.zshrc"
-    NPM_PATH_LINE="export PATH=\"$HOME/.npm-global/bin:\$PATH\""
-    ;;
-  bash)
-    SHELL_CONFIG="${HOME}/.bashrc"
-    NPM_PATH_LINE="export PATH=\"$HOME/.npm-global/bin:\$PATH\""
-    ;;
-  fish)
-    SHELL_CONFIG="${HOME}/.config/fish/config.fish"
-    NPM_PATH_LINE="set -gx PATH \$HOME/.npm-global/bin \$PATH"
-    ;;
-  *)
-    # For other shells, try .${SHELL}rc pattern
-    SHELL_CONFIG="${HOME}/.${CURRENT_SHELL}rc"
-    NPM_PATH_LINE="export PATH=\"$HOME/.npm-global/bin:\$PATH\""
-    echo -e "${YELLOW}Note: Detected shell '$CURRENT_SHELL' - using $SHELL_CONFIG${NC}"
-    ;;
+zsh)
+  SHELL_CONFIG="${HOME}/.zshrc"
+  NPM_PATH_LINE="export PATH=\"$HOME/.npm-global/bin:\$PATH\""
+  ;;
+bash)
+  SHELL_CONFIG="${HOME}/.bashrc"
+  NPM_PATH_LINE="export PATH=\"$HOME/.npm-global/bin:\$PATH\""
+  ;;
+fish)
+  SHELL_CONFIG="${HOME}/.config/fish/config.fish"
+  NPM_PATH_LINE="set -gx PATH \$HOME/.npm-global/bin \$PATH"
+  ;;
+*)
+  # For other shells, try .${SHELL}rc pattern
+  SHELL_CONFIG="${HOME}/.${CURRENT_SHELL}rc"
+  NPM_PATH_LINE="export PATH=\"$HOME/.npm-global/bin:\$PATH\""
+  echo -e "${YELLOW}Note: Detected shell '$CURRENT_SHELL' - using $SHELL_CONFIG${NC}"
+  ;;
 esac
 
 if [ -f "$SHELL_CONFIG" ]; then
   if ! grep -q "npm-global" "$SHELL_CONFIG"; then
-    echo "$NPM_PATH_LINE" >> "$SHELL_CONFIG"
+    echo "$NPM_PATH_LINE" >>"$SHELL_CONFIG"
     echo -e "${GREEN}✓ Added npm PATH to $SHELL_CONFIG${NC}"
   else
     echo -e "${GREEN}✓ npm PATH already in $SHELL_CONFIG${NC}"

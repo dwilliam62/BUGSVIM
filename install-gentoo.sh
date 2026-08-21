@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # ================================================================================================
 # bugsvim - Installation Script for Gentoo Linux
 # ================================================================================================
@@ -34,9 +34,16 @@ EOF
 
 for arg in "$@"; do
   case "$arg" in
-    -f|--force) FORCE_REINSTALL=1 ;;
-    -h|--help) usage; exit 0 ;;
-    *) echo "Unknown option: $arg"; usage; exit 1 ;;
+  -f | --force) FORCE_REINSTALL=1 ;;
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  *)
+    echo "Unknown option: $arg"
+    usage
+    exit 1
+    ;;
   esac
 done
 
@@ -314,7 +321,6 @@ sudo emerge --sync || true
 
 echo -e "${BLUE}Step 2: Installing core dependencies...${NC}"
 check_and_install_packages \
-  app-editors/neovim \
   dev-vcs/git \
   sys-apps/ripgrep \
   sys-apps/fd \
@@ -326,8 +332,8 @@ echo -e "${BLUE}Step 3: Installing language servers and development tools...${NC
 check_and_install_packages \
   dev-lang/lua \
   dev-lang/python \
-  net-libs/nodejs \
-  # llvm-core/clang  # disabled for now: C/C++ toolchain not needed
+  net-libs/nodejs
+# llvm-core/clang  # disabled for now: C/C++ toolchain not needed
 
 # Rust installation disabled for now (not needed)
 
@@ -382,7 +388,7 @@ else
   echo -e "${YELLOW}Warning: shfmt not available - will install via npm${NC}"
   if command -v npm &>/dev/null; then
     if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed shfmt; then
-    npm install -g --prefix "$NPM_PREFIX" shfmt || FAILED_NPM+=("shfmt")
+      npm install -g --prefix "$NPM_PREFIX" shfmt || FAILED_NPM+=("shfmt")
     else
       echo -e "${GREEN}✓ shfmt already installed${NC}"
     fi

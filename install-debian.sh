@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # ================================================================================================
 # bugsvim - Installation Script for Debian/Ubuntu
 # ================================================================================================
@@ -36,10 +36,17 @@ EOF
 
 for arg in "$@"; do
   case "$arg" in
-    -f|--force) FORCE_REINSTALL=1 ;;
-    --hyprls-only) HYPRLS_ONLY=1 ;;
-    -h|--help) usage; exit 0 ;;
-    *) echo "Unknown option: $arg"; usage; exit 1 ;;
+  -f | --force) FORCE_REINSTALL=1 ;;
+  --hyprls-only) HYPRLS_ONLY=1 ;;
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  *)
+    echo "Unknown option: $arg"
+    usage
+    exit 1
+    ;;
   esac
 done
 
