@@ -13,6 +13,7 @@
  - Removed neovim from install scripts 
  - Added json/jsonc formatters 
  - Added `jq` to deps 
+ - Fixed stall after hyprls install
 
 
 #### 📅 **Updated: April 13th, 2026**

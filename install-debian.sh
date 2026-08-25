@@ -58,7 +58,7 @@ hyprls_installed() {
 }
 
 hyprls_version() {
-  hyprls --version 2>/dev/null | head -1
+  hyprls </dev/null 2>&1 | sed -n 's/.*hyprls@\([^/]*\).*/\1/p' | head -1
 }
 
 npm_pkg_installed() {
