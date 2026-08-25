@@ -5,7 +5,15 @@
 
 ---
 
-# 🚀 **Current Release - v1.0.3**
+# 🚀 **Current Release - v1.0.4**
+
+#### 📅 **Updated: August 24th, 2026**
+
+ - Updated bash scripts for `env`
+ - Removed neovim from install scripts 
+ - Added json/jsonc formatters 
+ - Added `jq` to deps 
+
 
 #### 📅 **Updated: April 13th, 2026**
 

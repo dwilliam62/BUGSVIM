@@ -162,6 +162,7 @@ run_as_root pkg install -y \
   ripgrep \
   fd-find \
   curl \
+  jq \
   base64 \
   gmake \
   pkgconf

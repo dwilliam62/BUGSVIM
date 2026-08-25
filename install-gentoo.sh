@@ -325,6 +325,7 @@ check_and_install_packages \
   sys-apps/ripgrep \
   sys-apps/fd \
   net-misc/curl \
+  app-misc/jq \
   sys-devel/gcc \
   dev-ruby/pkg-config
 

@@ -16,7 +16,7 @@ DEBIAN / UBUNTU
 FULL INSTALLATION (All LSPs + Formatters):
 
 sudo apt-get update && sudo apt-get install -y \
-  neovim git ripgrep fd-find curl build-essential pkg-config \
+  neovim git ripgrep fd-find curl jq build-essential pkg-config \
   lua-language-server python3-pip nodejs npm clang clang-tools \
   bash-language-server rustup nil stylua shfmt clang-format prettier \
   lazygit bat wl-clipboard && \

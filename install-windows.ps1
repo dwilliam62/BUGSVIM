@@ -189,6 +189,7 @@ if ($InstallDeps) {
             'Git.Git',
             'BurntSushi.ripgrep.MSVC',
             'sharkdp.fd',
+            'jqlang.jq',
             'OpenJS.NodeJS.LTS',
             'Python.Python.3.12',
             'LLVM.LLVM',

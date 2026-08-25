@@ -225,6 +225,7 @@ sudo apt-get install -y \
   ripgrep \
   fd-find \
   curl \
+  jq \
   build-essential \
   pkg-config #neovim \
 

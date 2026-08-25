@@ -158,6 +158,7 @@ sudo pacman -S --needed --noconfirm \
   ripgrep \
   fd \
   curl \
+  jq \
   base-devel \
   pkg-config
 

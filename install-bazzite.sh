@@ -268,6 +268,7 @@ if pkg_install \
   ripgrep \
   fd \
   curl \
+  jq \
   pkg-config; then
   [ "$USE_BREW" -eq 0 ] && REBOOT_REQUIRED=1
 else

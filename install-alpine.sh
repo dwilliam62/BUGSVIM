@@ -159,6 +159,7 @@ run_as_root apk add --no-interactive \
   ripgrep \
   fd \
   curl \
+  jq \
   build-base \
   pkgconf || FAILED_PACKAGES+=("core-deps")
 

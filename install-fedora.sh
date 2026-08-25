@@ -158,6 +158,7 @@ sudo dnf install -y \
   ripgrep \
   fd \
   curl \
+  jq \
   @development-tools \
   pkg-config
 

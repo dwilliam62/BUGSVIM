@@ -163,6 +163,7 @@ run_as_root pkg_add \
   ripgrep \
   fd \
   curl \
+  jq \
   gmake \
   pkgconf
 

@@ -153,6 +153,7 @@ sudo zypper install -y \
   ripgrep \
   fd \
   curl \
+  jq \
   gcc \
   gcc-c++ \
   make \
