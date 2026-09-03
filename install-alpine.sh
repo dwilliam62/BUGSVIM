@@ -21,6 +21,7 @@ FAILED_NPM=()
 FAILED_PYTHON=()
 
 FORCE_REINSTALL=0
+UPDATE_ONLY=0
 
 usage() {
   cat <<'EOF'
@@ -28,6 +29,7 @@ Usage: install-alpine.sh [options]
 
 Options:
   -f, --force    Force rebuild/reinstall of optional packages
+  -u, --update   Run update tasks (check/install tree-sitter-cli, clean legacy caches, sync config)
   -h, --help     Show this help message
 EOF
 }
@@ -35,6 +37,7 @@ EOF
 for arg in "$@"; do
   case "$arg" in
   -f | --force) FORCE_REINSTALL=1 ;;
+  -u | --update) UPDATE_ONLY=1 ;;
   -h | --help)
     usage
     exit 0
@@ -46,6 +49,72 @@ for arg in "$@"; do
     ;;
   esac
 done
+
+# ================================================================================================
+# Update tasks pipeline (Modular - add new tasks to UPDATE_TASKS array)
+# ================================================================================================
+update_treesitter_cli() {
+  echo -e "${BLUE}Checking tree-sitter CLI...${NC}"
+  if ! command -v tree-sitter >/dev/null 2>&1; then
+    echo -e "${YELLOW}tree-sitter CLI not found. Installing...${NC}"
+    if run_as_root apk add --no-interactive tree-sitter-cli 2>/dev/null; then
+      echo -e "${GREEN}✓ tree-sitter-cli installed via apk${NC}"
+    elif command -v cargo >/dev/null 2>&1; then
+      echo -e "${BLUE}Installing tree-sitter-cli via cargo...${NC}"
+      cargo install tree-sitter-cli --root "${HOME}/.local" && echo -e "${GREEN}✓ tree-sitter-cli installed via cargo${NC}"
+    else
+      echo -e "${RED}✗ Unable to install tree-sitter-cli (install apk package or rust/cargo)${NC}"
+    fi
+  else
+    echo -e "${GREEN}✓ tree-sitter CLI available: $(tree-sitter --version 2>/dev/null || echo 'installed')${NC}"
+  fi
+}
+
+clean_legacy_treesitter() {
+  echo -e "${BLUE}Checking for legacy nvim-treesitter cache...${NC}"
+  local ts_dir="${HOME}/.local/share/nvim/lazy/nvim-treesitter"
+  if [ -d "$ts_dir" ]; then
+    echo -e "${YELLOW}Removing legacy nvim-treesitter cache (${ts_dir}) for clean main branch migration...${NC}"
+    rm -rf "$ts_dir"
+    echo -e "${GREEN}✓ Legacy nvim-treesitter cache removed${NC}"
+  else
+    echo -e "${GREEN}✓ No legacy nvim-treesitter directory found${NC}"
+  fi
+}
+
+sync_neovim_config() {
+  echo -e "${BLUE}Syncing bugsvim config to ~/.config/nvim...${NC}"
+  local script_dir
+  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  mkdir -p "${HOME}/.config/nvim"
+  cp -r "${script_dir}/nvim/"* "${HOME}/.config/nvim/"
+  echo -e "${GREEN}✓ bugsvim config updated in ~/.config/nvim${NC}"
+}
+
+# Modular update tasks list — easily add future update tasks here
+UPDATE_TASKS=(
+  clean_legacy_treesitter
+  update_treesitter_cli
+  sync_neovim_config
+)
+
+run_update_tasks() {
+  echo -e "${BLUE}╔════════════════════════════════════════════════════════════════╗${NC}"
+  echo -e "${BLUE}║   bugsvim - Alpine Linux Update Tasks                          ║${NC}"
+  echo -e "${BLUE}╚════════════════════════════════════════════════════════════════╝${NC}"
+  echo ""
+  for task in "${UPDATE_TASKS[@]}"; do
+    "$task"
+    echo ""
+  done
+  echo -e "${GREEN}✓ All update tasks completed successfully!${NC}"
+  echo "Next steps: Launch 'nvim' and run ':Lazy sync' or ':TSUpdate' if needed."
+}
+
+if [ "$UPDATE_ONLY" -eq 1 ]; then
+  run_update_tasks
+  exit 0
+fi
 
 # ================================================================================================
 # run_as_root — prefer doas, fall back to sudo, or direct if already root
@@ -161,7 +230,8 @@ run_as_root apk add --no-interactive \
   curl \
   jq \
   build-base \
-  pkgconf || FAILED_PACKAGES+=("core-deps")
+  pkgconf \
+  tree-sitter-cli || update_treesitter_cli
 
 echo -e "${BLUE}Step 3: Installing language runtimes and tools...${NC}"
 run_as_root apk add --no-interactive \

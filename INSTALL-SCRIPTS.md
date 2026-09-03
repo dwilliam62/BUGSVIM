@@ -9,24 +9,60 @@ Choose your distribution and run the corresponding script:
 ### Arch Linux
 
 ```bash
+# Fresh install
 bash install-arch.sh
+
+# Update existing install (sync config, check tree-sitter-cli, clean legacy caches)
+bash install-arch.sh -u
 ```
 
 ### Debian/Ubuntu
 
 ```bash
+# Fresh install
 bash install-debian.sh
+
+# Update existing install
+bash install-debian.sh -u
 ```
 
 ### Fedora
 
 ```bash
+# Fresh install
 bash install-fedora.sh
+
+# Update existing install
+bash install-fedora.sh -u
 ```
 ### OpenSUSE
 
 ```bash
+# Fresh install
 bash install-opensuse.sh
+
+# Update existing install
+bash install-opensuse.sh -u
+```
+
+### Gentoo Linux
+
+```bash
+# Fresh install
+bash install-gentoo.sh
+
+# Update existing install
+bash install-gentoo.sh -u
+```
+
+### Bazzite
+
+```bash
+# Fresh install
+bash install-bazzite.sh
+
+# Update existing install
+bash install-bazzite.sh -u
 ```
 
 ### Windows (PowerShell)

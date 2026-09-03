@@ -77,7 +77,7 @@ This configuration is forked from **[BUGSVIM](https://github.com/Abhra00/BUGSVIM
 
 ### Quick Install (Recommended)
 
-bugsvim provides automated installation scripts for major Linux distributions:
+bugsvim provides automated installation and update scripts for major distributions:
 
 #### Arch Linux
 
@@ -85,14 +85,20 @@ bugsvim provides automated installation scripts for major Linux distributions:
 git clone https://github.com/dwilliam62/bugsvim ~/.config/bugsvim
 cd ~/.config/bugsvim
 bash install-arch.sh
+
+# Or update existing installation
+bash install-arch.sh -u
 ```
 
-#### Debian/Ubuntu
+#### Debian / Ubuntu
 
 ```bash
 git clone https://github.com/dwilliam62/bugsvim ~/.config/bugsvim
 cd ~/.config/bugsvim
 bash install-debian.sh
+
+# Or update existing installation
+bash install-debian.sh -u
 ```
 
 #### Fedora
@@ -101,6 +107,63 @@ bash install-debian.sh
 git clone https://github.com/dwilliam62/bugsvim ~/.config/bugsvim
 cd ~/.config/bugsvim
 bash install-fedora.sh
+
+# Or update existing installation
+bash install-fedora.sh -u
+```
+
+#### Gentoo Linux
+
+```bash
+git clone https://github.com/dwilliam62/bugsvim ~/.config/bugsvim
+cd ~/.config/bugsvim
+bash install-gentoo.sh
+
+# Or update existing installation
+bash install-gentoo.sh -u
+```
+
+#### OpenSUSE
+
+```bash
+git clone https://github.com/dwilliam62/bugsvim ~/.config/bugsvim
+cd ~/.config/bugsvim
+bash install-opensuse.sh
+
+# Or update existing installation
+bash install-opensuse.sh -u
+```
+
+#### Alpine Linux
+
+```bash
+git clone https://github.com/dwilliam62/bugsvim ~/.config/bugsvim
+cd ~/.config/bugsvim
+bash install-alpine.sh
+
+# Or update existing installation
+bash install-alpine.sh -u
+```
+
+#### Bazzite (Fedora Atomic)
+
+```bash
+git clone https://github.com/dwilliam62/bugsvim ~/.config/bugsvim
+cd ~/.config/bugsvim
+bash install-bazzite.sh
+
+# Or update existing installation
+bash install-bazzite.sh -u
+```
+
+#### FreeBSD / OpenBSD
+
+```bash
+# FreeBSD
+bash install-freebsd.sh
+
+# OpenBSD
+bash install-openbsd.sh
 ```
 
 #### Windows (PowerShell)
@@ -111,30 +174,27 @@ Set-Location $env:LOCALAPPDATA\bugsvim
 .\install-windows.ps1
 ```
 
-**The installation scripts will:**
+**The installation scripts provide:**
 
-- Detect your distribution
-- Backup your existing NeoVim configuration
-- Install all required system packages and language servers
-- Configure npm with user-level permissions
-- Verify the complete installation
-- Copy the configuration to `~/.config/nvim`
+- **Full Installation**: Detects distribution, backs up existing NeoVim configurations, installs required system packages/LSPs, configures user-level npm, verifies setup, and copies config to `~/.config/nvim`.
+- **Modular Update Mode (`-u` / `--update`)**: Checks/installs `tree-sitter-cli`, cleans legacy `nvim-treesitter` caches from older `master` checkouts, and synchronizes the latest configuration.
 
-See [INSTALL.md](./INSTALL.md) for manual installation steps.
+See [INSTALL.md](./INSTALL.md) and [INSTALL-SCRIPTS.md](./INSTALL-SCRIPTS.md) for detailed instructions.
 
 ## Required Packages
 
 ### Core Dependencies
 
-| Package                                      | Purpose                  |
-| -------------------------------------------- | ------------------------ |
-| **neovim**                                   | Text editor              |
-| **git**                                      | Version control          |
-| **ripgrep**                                  | Fast file search         |
-| **fd**                                       | Fast directory traversal |
-| **curl**                                     | Network requests         |
-| **build-essential** / **@development-tools** | C/C++ compilation        |
-| **pkg-config**                               | Development libraries    |
+| Package                                      | Purpose                           |
+| -------------------------------------------- | --------------------------------- |
+| **neovim** (0.10+)                           | Text editor (0.10, 0.11, 0.12+)   |
+| **git**                                      | Version control                   |
+| **tree-sitter-cli**                          | Treesitter parser compiler        |
+| **ripgrep**                                  | Fast file search                  |
+| **fd**                                       | Fast directory traversal          |
+| **curl**                                     | Network requests                  |
+| **build-essential** / **@development-tools** | C/C++ compilation                 |
+| **pkg-config**                               | Development libraries             |
 
 ### Language Servers (LSP)
 
