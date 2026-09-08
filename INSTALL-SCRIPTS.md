@@ -14,6 +14,9 @@ bash install-arch.sh
 
 # Update existing install (sync config, check tree-sitter-cli, clean legacy caches)
 bash install-arch.sh -u
+
+# Check and install all missing dependencies
+bash install-arch.sh -d
 ```
 
 ### Debian/Ubuntu
@@ -24,6 +27,9 @@ bash install-debian.sh
 
 # Update existing install
 bash install-debian.sh -u
+
+# Check and install all missing dependencies
+bash install-debian.sh -d
 ```
 
 ### Fedora
@@ -34,6 +40,9 @@ bash install-fedora.sh
 
 # Update existing install
 bash install-fedora.sh -u
+
+# Check and install all missing dependencies
+bash install-fedora.sh -d
 ```
 ### OpenSUSE
 
@@ -43,6 +52,9 @@ bash install-opensuse.sh
 
 # Update existing install
 bash install-opensuse.sh -u
+
+# Check and install all missing dependencies
+bash install-opensuse.sh -d
 ```
 
 ### Gentoo Linux
@@ -53,6 +65,9 @@ bash install-gentoo.sh
 
 # Update existing install
 bash install-gentoo.sh -u
+
+# Check and install all missing dependencies
+bash install-gentoo.sh -d
 ```
 
 ### Bazzite
@@ -63,6 +78,9 @@ bash install-bazzite.sh
 
 # Update existing install
 bash install-bazzite.sh -u
+
+# Check and install all missing dependencies
+bash install-bazzite.sh -d
 ```
 
 ### Windows (PowerShell)
@@ -75,6 +93,9 @@ bash install-bazzite.sh -u
 
 ```bash
 bash install-freebsd.sh
+
+# Check and install all missing dependencies
+bash install-freebsd.sh -d
 ```
 
 > Note: FreeBSD only tested with FreeBSD v15.0
@@ -84,6 +105,9 @@ bash install-freebsd.sh
 
 ```bash
 bash install-openbsd.sh
+
+# Check and install all missing dependencies
+bash install-openbsd.sh -d
 ```
 
 ## What the Scripts Do

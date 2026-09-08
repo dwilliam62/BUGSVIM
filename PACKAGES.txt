@@ -17,7 +17,7 @@ FULL INSTALLATION (All LSPs + Formatters):
 
 sudo apt-get update && sudo apt-get install -y \
   neovim git ripgrep fd-find curl jq build-essential pkg-config \
-  lua-language-server python3-pip nodejs npm clang clang-tools \
+  lua-language-server lua-check luarocks python3-pip nodejs npm clang clang-tools \
   bash-language-server rustup nil stylua shfmt clang-format prettier \
   lazygit bat wl-clipboard && \
 npm install -g @fsouza/prettierd vscode-langservers-extracted && \
@@ -39,7 +39,7 @@ FULL INSTALLATION (All LSPs + Formatters):
 
 sudo dnf update -y && sudo dnf install -y \
   neovim git ripgrep fd curl @development-tools pkg-config \
-  lua lua-language-server python3-devel python3-pip nodejs npm clang \
+  lua luarocks luacheck lua-language-server python3-devel python3-pip nodejs npm clang \
   clang-tools-extra bash-language-server rust nil stylua shfmt prettier \
   lazygit bat wl-clipboard && \
 npm install -g @fsouza/prettierd vscode-langservers-extracted && \
@@ -60,7 +60,7 @@ FULL INSTALLATION (All LSPs + Formatters):
 
 sudo pacman -S --noconfirm \
   neovim git ripgrep fd curl base-devel pkg-config \
-  lua-language-server python nodejs npm clang \
+  lua-language-server luacheck luarocks python nodejs npm clang \
   bash-language-server rustup nil stylua shfmt clang prettier \
   lazygit bat wl-clipboard && \
 npm install -g @fsouza/prettierd vscode-langservers-extracted
@@ -74,7 +74,7 @@ FULL INSTALLATION WITH AUR (Recommended for Arch):
 
 sudo pacman -S --noconfirm \
   neovim git ripgrep fd curl base-devel pkg-config \
-  lua-language-server python nodejs npm clang \
+  lua-language-server luacheck luarocks python nodejs npm clang \
   bash-language-server rustup nil stylua shfmt clang prettier \
   lazygit bat wl-clipboard && \
 npm install -g @fsouza/prettierd vscode-langservers-extracted && \
@@ -94,7 +94,7 @@ LANGUAGE SERVER & FORMATTER BREAKDOWN
 
 LSP/Formatter by Language:
 
-  Lua           → lua-language-server + stylua
+  Lua           → lua-language-server + stylua + luacheck (via package manager or luarocks)
   Python        → pyright + ruff_format
   C/C++         → clangd + clang-format
   TypeScript    → ts_ls (via nodejs) + prettierd

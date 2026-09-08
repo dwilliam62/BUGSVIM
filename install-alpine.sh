@@ -22,6 +22,7 @@ FAILED_PYTHON=()
 
 FORCE_REINSTALL=0
 UPDATE_ONLY=0
+DEPS_ONLY=0
 
 usage() {
   cat <<'EOF'
@@ -30,6 +31,7 @@ Usage: install-alpine.sh [options]
 Options:
   -f, --force    Force rebuild/reinstall of optional packages
   -u, --update   Run update tasks (check/install tree-sitter-cli, clean legacy caches, sync config)
+  -d, --deps     Check for all dependencies and install missing ones
   -h, --help     Show this help message
 EOF
 }
@@ -38,6 +40,7 @@ for arg in "$@"; do
   case "$arg" in
   -f | --force) FORCE_REINSTALL=1 ;;
   -u | --update) UPDATE_ONLY=1 ;;
+  -d | --deps) DEPS_ONLY=1 ;;
   -h | --help)
     usage
     exit 0
@@ -111,8 +114,138 @@ run_update_tasks() {
   echo "Next steps: Launch 'nvim' and run ':Lazy sync' or ':TSUpdate' if needed."
 }
 
+verify_installation() {
+  MISSING=0
+
+  echo "Checking LSP servers:"
+  for cmd in lua-language-server clangd; do
+    if command -v "$cmd" >/dev/null 2>&1; then
+      echo -e "  ${GREEN}✓${NC} $cmd"
+    else
+      echo -e "  ${RED}✗${NC} $cmd (missing)"
+      MISSING=1
+    fi
+  done
+
+  echo ""
+  echo "Checking formatters and linters:"
+  for cmd in stylua luacheck shfmt clang-format prettier; do
+    if command -v "$cmd" >/dev/null 2>&1; then
+      echo -e "  ${GREEN}✓${NC} $cmd"
+    else
+      echo -e "  ${RED}✗${NC} $cmd (missing)"
+      MISSING=1
+    fi
+  done
+
+  echo ""
+  echo "Checking npm packages:"
+  if npm list -g @fsouza/prettierd >/dev/null 2>&1; then
+    echo -e "  ${GREEN}✓${NC} @fsouza/prettierd"
+  else
+    echo -e "  ${RED}✗${NC} @fsouza/prettierd (missing)"
+    MISSING=1
+  fi
+  if npm list -g vscode-langservers-extracted >/dev/null 2>&1; then
+    echo -e "  ${GREEN}✓${NC} vscode-langservers-extracted"
+  else
+    echo -e "  ${RED}✗${NC} vscode-langservers-extracted (missing)"
+    MISSING=1
+  fi
+}
+
+check_and_install_deps() {
+  echo -e "${BLUE}╔════════════════════════════════════════════════════════════════╗${NC}"
+  echo -e "${BLUE}║   bugsvim - Checking and Installing Dependencies               ║${NC}"
+  echo -e "${BLUE}╚════════════════════════════════════════════════════════════════╝${NC}"
+  echo ""
+
+  echo -e "${BLUE}Updating package indexes...${NC}"
+  run_as_root apk update || true
+
+  echo -e "${BLUE}Installing missing apk packages...${NC}"
+  run_as_root apk add --no-interactive \
+    git \
+    ripgrep \
+    fd \
+    curl \
+    jq \
+    build-base \
+    pkgconf \
+    tree-sitter-cli \
+    lua5.1 \
+    luarocks \
+    python3 \
+    py3-pip \
+    nodejs \
+    npm \
+    rust \
+    clang \
+    cmd:clangd \
+    cmd:clang-format \
+    lua-language-server \
+    shfmt \
+    stylua \
+    luacheck \
+    lua5.1-luacheck \
+    lazygit \
+    bat \
+    wl-clipboard \
+    py3-ruff \
+    py3-pyright || true
+
+  # npm config & packages
+  if command -v npm >/dev/null 2>&1; then
+    mkdir -p "$HOME/.npm-global"
+    npm config set prefix "$HOME/.npm-global" --location=per-user 2>/dev/null || true
+    export PATH="$HOME/.npm-global/bin:$PATH"
+
+    local npm_pkgs=(bash-language-server prettier @fsouza/prettierd vscode-langservers-extracted neovim)
+    for pkg in "${npm_pkgs[@]}"; do
+      if ! npm_pkg_installed "$pkg"; then
+        echo -e "${BLUE}Installing missing npm package: $pkg...${NC}"
+        npm install -g "$pkg" || FAILED_NPM+=("$pkg")
+      else
+        echo -e "${GREEN}✓ npm package $pkg already installed${NC}"
+      fi
+    done
+  fi
+
+  # Luacheck fallback via luarocks
+  if ! command -v luacheck >/dev/null 2>&1 && command -v luarocks >/dev/null 2>&1; then
+    echo -e "${BLUE}Installing luacheck via luarocks...${NC}"
+    run_as_root luarocks install luacheck 2>/dev/null || luarocks install --local luacheck 2>/dev/null || true
+  fi
+
+  # Python packages fallback
+  if ! command -v ruff >/dev/null 2>&1; then
+    pip3 install --user ruff 2>/dev/null || python3 -m pip install --user ruff 2>/dev/null || true
+  fi
+  if ! command -v pyright-langserver >/dev/null 2>&1 && ! command -v pyright >/dev/null 2>&1; then
+    pip3 install --user pyright 2>/dev/null || python3 -m pip install --user pyright 2>/dev/null || true
+  fi
+
+  update_treesitter_cli
+
+  echo ""
+  echo -e "${BLUE}Verifying dependencies...${NC}"
+  echo ""
+  verify_installation
+  echo ""
+  if [ $MISSING -eq 0 ]; then
+    echo -e "${GREEN}✓ All dependencies are satisfied!${NC}"
+  else
+    echo -e "${YELLOW}⚠ Some dependencies are missing (see above)${NC}"
+  fi
+}
+
 if [ "$UPDATE_ONLY" -eq 1 ]; then
   run_update_tasks
+  exit 0
+fi
+
+if [ "$DEPS_ONLY" -eq 1 ]; then
+  check_and_install_deps
   exit 0
 fi
 
@@ -235,6 +368,8 @@ run_as_root apk add --no-interactive \
 
 echo -e "${BLUE}Step 3: Installing language runtimes and tools...${NC}"
 run_as_root apk add --no-interactive \
+  lua5.1 \
+  luarocks \
   python3 \
   py3-pip \
   nodejs \
@@ -273,9 +408,21 @@ else
   FAILED_NPM+=("bash-language-server")
 fi
 
-echo -e "${BLUE}Step 4: Installing formatters...${NC}"
-# shfmt and stylua via apk; prettier via npm
-run_as_root apk add --no-interactive shfmt stylua || FAILED_PACKAGES+=("shfmt/stylua")
+echo -e "${BLUE}Step 4: Installing formatters and linters...${NC}"
+# shfmt and stylua via apk; luacheck via apk/luarocks; prettier via npm
+run_as_root apk add --no-interactive shfmt stylua luacheck lua5.1-luacheck || FAILED_PACKAGES+=("shfmt/stylua")
+if ! command -v luacheck >/dev/null 2>&1; then
+  if command -v luarocks >/dev/null 2>&1; then
+    echo -e "${BLUE}  Installing luacheck via luarocks...${NC}"
+    run_as_root luarocks install luacheck 2>/dev/null || luarocks install --local luacheck 2>/dev/null || true
+  fi
+fi
+if command -v luacheck >/dev/null 2>&1; then
+  echo -e "${GREEN}✓ luacheck installed${NC}"
+else
+  echo -e "${YELLOW}Warning: luacheck install failed${NC}"
+  FAILED_PACKAGES+=("luacheck")
+fi
 if command -v npm >/dev/null 2>&1; then
   if [ "$FORCE_REINSTALL" -eq 1 ] || ! npm_pkg_installed prettier; then
     npm install -g prettier || FAILED_NPM+=("prettier")
@@ -353,43 +500,7 @@ echo ""
 echo -e "${BLUE}Step 8: Verifying installation...${NC}"
 echo ""
 
-MISSING=0
-
-echo "Checking LSP servers:"
-for cmd in lua-language-server clangd; do
-  if command -v "$cmd" >/dev/null 2>&1; then
-    echo -e "  ${GREEN}✓${NC} $cmd"
-  else
-    echo -e "  ${RED}✗${NC} $cmd (missing)"
-    MISSING=1
-  fi
-done
-
-echo ""
-echo "Checking formatters:"
-for cmd in stylua shfmt clang-format prettier; do
-  if command -v "$cmd" >/dev/null 2>&1; then
-    echo -e "  ${GREEN}✓${NC} $cmd"
-  else
-    echo -e "  ${RED}✗${NC} $cmd (missing)"
-    MISSING=1
-  fi
-done
-
-echo ""
-echo "Checking npm packages:"
-if npm list -g @fsouza/prettierd >/dev/null 2>&1; then
-  echo -e "  ${GREEN}✓${NC} @fsouza/prettierd"
-else
-  echo -e "  ${RED}✗${NC} @fsouza/prettierd (missing)"
-  MISSING=1
-fi
-if npm list -g vscode-langservers-extracted >/dev/null 2>&1; then
-  echo -e "  ${GREEN}✓${NC} vscode-langservers-extracted"
-else
-  echo -e "  ${RED}✗${NC} vscode-langservers-extracted (missing)"
-  MISSING=1
-fi
+verify_installation
 
 echo ""
 echo -e "${BLUE}Step 9: Setting up bugsvim configuration...${NC}"

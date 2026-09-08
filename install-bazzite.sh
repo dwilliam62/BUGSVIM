@@ -23,6 +23,7 @@ FAILED_HYPRLS=()
 FORCE_REINSTALL=0
 REBOOT_REQUIRED=0
 UPDATE_ONLY=0
+DEPS_ONLY=0
 
 usage() {
   cat <<'EOF'
@@ -31,6 +32,7 @@ Usage: install-bazzite.sh [options]
 Options:
   -f, --force    Force rebuild/reinstall of optional packages
   -u, --update   Run update tasks (check/install tree-sitter-cli, clean legacy caches, sync config)
+  -d, --deps     Check for all dependencies and install missing ones
   -h, --help     Show this help message
 EOF
 }
@@ -39,6 +41,7 @@ for arg in "$@"; do
   case "$arg" in
   -f | --force) FORCE_REINSTALL=1 ;;
   -u | --update) UPDATE_ONLY=1 ;;
+  -d | --deps) DEPS_ONLY=1 ;;
   -h | --help)
     usage
     exit 0
@@ -114,8 +117,145 @@ run_update_tasks() {
   echo "Next steps: Launch 'nvim' and run ':Lazy sync' or ':TSUpdate' if needed."
 }
 
+verify_installation() {
+  MISSING=0
+
+  echo "Checking LSP servers:"
+  for cmd in lua-language-server clangd; do
+    if command -v "$cmd" &>/dev/null; then
+      echo -e "  ${GREEN}✓${NC} $cmd"
+    else
+      echo -e "  ${RED}✗${NC} $cmd (missing)"
+      MISSING=1
+    fi
+  done
+
+  echo ""
+  echo "Checking formatters and linters:"
+  for cmd in stylua luacheck shfmt clang-format; do
+    if command -v "$cmd" &>/dev/null; then
+      echo -e "  ${GREEN}✓${NC} $cmd"
+    else
+      echo -e "  ${RED}✗${NC} $cmd (missing)"
+      MISSING=1
+    fi
+  done
+
+  echo ""
+  echo "Checking npm packages:"
+  if npm list -g @fsouza/prettierd &>/dev/null; then
+    echo -e "  ${GREEN}✓${NC} @fsouza/prettierd"
+  else
+    echo -e "  ${RED}✗${NC} @fsouza/prettierd (missing)"
+    MISSING=1
+  fi
+
+  if npm list -g vscode-langservers-extracted &>/dev/null; then
+    echo -e "  ${GREEN}✓${NC} vscode-langservers-extracted"
+  else
+    echo -e "  ${RED}✗${NC} vscode-langservers-extracted (missing)"
+    MISSING=1
+  fi
+
+  echo ""
+  echo "Checking Python packages:"
+  if python3 -c "import pyright" 2>/dev/null || python3 -m pip show pyright &>/dev/null; then
+    echo -e "  ${GREEN}✓${NC} pyright"
+  else
+    echo -e "  ${RED}✗${NC} pyright (missing)"
+    MISSING=1
+  fi
+
+  echo ""
+  echo "Checking Rust toolchain:"
+  if command -v rustc &>/dev/null; then
+    echo -e "  ${GREEN}✓${NC} rustc"
+  else
+    echo -e "  ${RED}✗${NC} rustc (missing)"
+    MISSING=1
+  fi
+}
+
+check_and_install_deps() {
+  echo -e "${BLUE}╔════════════════════════════════════════════════════════════════╗${NC}"
+  echo -e "${BLUE}║   bugsvim - Checking and Installing Dependencies               ║${NC}"
+  echo -e "${BLUE}╚════════════════════════════════════════════════════════════════╝${NC}"
+  echo ""
+
+  echo -e "${BLUE}Installing core and development dependencies (${BLUE}$(pkg_label)${NC}${BLUE})...${NC}"
+  if [ "$USE_BREW" -eq 1 ]; then
+    pkg_install \
+      git ripgrep fd curl jq pkg-config tree-sitter \
+      gcc make automake autoconf \
+      lua luarocks python node llvm rust \
+      shfmt clang-format lazygit bat clipboard
+  else
+    pkg_install \
+      git ripgrep fd curl jq pkg-config tree-sitter \
+      gcc gcc-c++ make automake autoconf \
+      lua luarocks python3-devel python3-pip nodejs npm clang clang-tools-extra rust \
+      shfmt lazygit bat wl-clipboard || true
+  fi
+
+  # luacheck
+  if command -v luacheck &>/dev/null; then
+    echo -e "${GREEN}✓ luacheck already installed${NC}"
+  elif [ "$USE_BREW" -eq 1 ] && command -v brew &>/dev/null && brew install luacheck 2>/dev/null; then
+    echo -e "${GREEN}✓ luacheck installed via brew${NC}"
+  elif command -v luarocks &>/dev/null; then
+    if luarocks install --local luacheck 2>/dev/null || sudo luarocks install luacheck 2>/dev/null; then
+      echo -e "${GREEN}✓ luacheck installed via luarocks${NC}"
+    else
+      echo -e "${YELLOW}Warning: luacheck install via luarocks failed${NC}"
+      FAILED_PACKAGES+=("luacheck")
+    fi
+  fi
+
+  # npm config & packages
+  if command -v npm &>/dev/null; then
+    mkdir -p ~/.npm-global
+    npm config set prefix '~/.npm-global' --location=per-user 2>/dev/null || true
+    export PATH=~/.npm-global/bin:$PATH
+
+    local npm_pkgs=(@johnnymorganz/stylua-bin prettier @fsouza/prettierd vscode-langservers-extracted neovim)
+    for pkg in "${npm_pkgs[@]}"; do
+      if ! npm_pkg_installed "$pkg"; then
+        echo -e "${BLUE}Installing missing npm package: $pkg...${NC}"
+        npm install -g "$pkg" || FAILED_NPM+=("$pkg")
+      else
+        echo -e "${GREEN}✓ npm package $pkg already installed${NC}"
+      fi
+    done
+  fi
+
+  # Python packages
+  if ! command -v ruff &>/dev/null || ! command -v pyright &>/dev/null; then
+    echo -e "${BLUE}Installing missing Python packages (ruff, pyright)...${NC}"
+    pip3 install --user --break-system-packages ruff pyright 2>/dev/null || \
+      python3 -m pip install --user --break-system-packages ruff pyright 2>/dev/null || true
+  fi
+
+  update_treesitter_cli
+
+  echo ""
+  echo -e "${BLUE}Verifying dependencies...${NC}"
+  echo ""
+  verify_installation
+  echo ""
+  if [ $MISSING -eq 0 ]; then
+    echo -e "${GREEN}✓ All dependencies are satisfied!${NC}"
+  else
+    echo -e "${YELLOW}⚠ Some dependencies are missing (see above)${NC}"
+  fi
+}
+
 if [ "$UPDATE_ONLY" -eq 1 ]; then
   run_update_tasks
+  exit 0
+fi
+
+if [ "$DEPS_ONLY" -eq 1 ]; then
+  check_and_install_deps
   exit 0
 fi
 
@@ -441,6 +581,23 @@ else
   FAILED_NPM+=("@johnnymorganz/stylua-bin" "prettier")
 fi
 
+echo -e "${BLUE}  Installing luacheck (Lua linter)...${NC}"
+if command -v luacheck &>/dev/null; then
+  echo -e "${GREEN}✓ luacheck already installed${NC}"
+elif [ "$USE_BREW" -eq 1 ] && command -v brew &>/dev/null && brew install luacheck 2>/dev/null; then
+  echo -e "${GREEN}✓ luacheck installed via brew${NC}"
+elif command -v luarocks &>/dev/null; then
+  if luarocks install --local luacheck 2>/dev/null || sudo luarocks install luacheck 2>/dev/null; then
+    echo -e "${GREEN}✓ luacheck installed via luarocks${NC}"
+  else
+    echo -e "${YELLOW}Warning: luacheck install via luarocks failed${NC}"
+    FAILED_PACKAGES+=("luacheck")
+  fi
+else
+  FAILED_PACKAGES+=("luacheck")
+  echo -e "${YELLOW}Warning: luacheck could not be installed${NC}"
+fi
+
 echo -e "${BLUE}Step 5: Installing optional convenience tools...${NC}"
 if [ "$USE_BREW" -eq 1 ]; then
   pkg_install \
@@ -546,62 +703,7 @@ echo ""
 echo -e "${BLUE}Step 10: Verifying installation...${NC}"
 echo ""
 
-MISSING=0
-
-echo "Checking LSP servers:"
-for cmd in lua-language-server clangd; do
-  if command -v "$cmd" &>/dev/null; then
-    echo -e "  ${GREEN}✓${NC} $cmd"
-  else
-    echo -e "  ${RED}✗${NC} $cmd (missing)"
-    MISSING=1
-  fi
-done
-
-echo ""
-echo "Checking formatters:"
-for cmd in stylua shfmt clang-format; do
-  if command -v "$cmd" &>/dev/null; then
-    echo -e "  ${GREEN}✓${NC} $cmd"
-  else
-    echo -e "  ${RED}✗${NC} $cmd (missing)"
-    MISSING=1
-  fi
-done
-
-echo ""
-echo "Checking npm packages:"
-if npm list -g @fsouza/prettierd &>/dev/null; then
-  echo -e "  ${GREEN}✓${NC} @fsouza/prettierd"
-else
-  echo -e "  ${RED}✗${NC} @fsouza/prettierd (missing)"
-  MISSING=1
-fi
-
-if npm list -g vscode-langservers-extracted &>/dev/null; then
-  echo -e "  ${GREEN}✓${NC} vscode-langservers-extracted"
-else
-  echo -e "  ${RED}✗${NC} vscode-langservers-extracted (missing)"
-  MISSING=1
-fi
-
-echo ""
-echo "Checking Python packages:"
-if python3 -c "import pyright" 2>/dev/null || python3 -m pip show pyright &>/dev/null; then
-  echo -e "  ${GREEN}✓${NC} pyright"
-else
-  echo -e "  ${RED}✗${NC} pyright (missing)"
-  MISSING=1
-fi
-
-echo ""
-echo "Checking Rust toolchain:"
-if command -v rustc &>/dev/null; then
-  echo -e "  ${GREEN}✓${NC} rustc"
-else
-  echo -e "  ${RED}✗${NC} rustc (missing)"
-  MISSING=1
-fi
+verify_installation
 
 echo ""
 

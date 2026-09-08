@@ -54,7 +54,7 @@ These scripts will:
 ```bash
 sudo apt-get update && sudo apt-get install -y \
   neovim git ripgrep fd-find curl build-essential pkg-config \
-  lua-language-server python3-pip nodejs npm clang clang-tools \
+  lua-language-server lua-check luarocks python3-pip nodejs npm clang clang-tools \
   bash-language-server rustup nil stylua shfmt clang-format prettier && \
 npm install -g @fsouza/prettierd vscode-langservers-extracted && \
 pip3 install --user ruff pyright
@@ -93,7 +93,7 @@ echo "Note: hyprls requires manual build from https://github.com/hyprwm/hyprland
 ```bash
 sudo pacman -S --noconfirm \
   neovim git ripgrep fd curl base-devel pkg-config \
-  lua-language-server python nodejs npm clang \
+  lua-language-server luacheck luarocks python nodejs npm clang \
   bash-language-server rustup nil stylua shfmt clang prettier && \
 npm install -g @fsouza/prettierd vscode-langservers-extracted
 ```
@@ -139,6 +139,8 @@ echo "✓ Setup complete!"
 | git | Version control |
 | ripgrep, fd | Fuzzy search/navigation |
 | lua-language-server | Lua LSP |
+| luacheck | Lua linter/checker |
+| luarocks | Lua package manager |
 | python3, pip3 | Python & pyright |
 | nodejs, npm | Node runtime & npm packages |
 | clang, clang-tools | C/C++ compiler & clangd |
@@ -203,7 +205,7 @@ nvim --headless -c 'checkhealth' -c 'qa'
 ```bash
 sudo dnf update -y && sudo dnf install -y \
   neovim git ripgrep fd curl @development-tools pkg-config \
-  lua lua-language-server python3-devel python3-pip nodejs npm clang \
+  lua luarocks luacheck lua-language-server python3-devel python3-pip nodejs npm clang \
   clang-tools-extra bash-language-server rust nil stylua shfmt prettier && \
 npm install -g @fsouza/prettierd vscode-langservers-extracted && \
 pip3 install --user ruff pyright

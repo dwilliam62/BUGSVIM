@@ -90,6 +90,10 @@ Each `install-<distro>.sh` script provides both full installation and modular up
   - Verifies and installs `tree-sitter-cli` if missing.
   - Cleans legacy `nvim-treesitter` caches from older `master` checkouts.
   - Syncs the updated `nvim/` config directory to `~/.config/nvim`.
+- **Dependency Check & Install**: `bash install-<distro>.sh -d` / `--deps`
+  - Checks for all required system packages, language servers, formatters, linters, npm packages, python packages, and luarocks tools.
+  - Installs any missing dependencies.
+  - Runs full verification.
 
 ### Plugin Manager: lazy.nvim
 

@@ -5,16 +5,21 @@
 
 ---
 
-# 🚀 **Current Release - v1.0.4**
+# 🚀 **Current Release - v1.0.5**
+
+#### 📅 **Updated: Sept 8th, 2026**
+
+- Added `-u` to update to nvim v12.x+
+- Added checks/install for `luacheck/luarock`
+- Added `--deps` to check for all needed pkgs and install
 
 #### 📅 **Updated: August 24th, 2026**
 
- - Updated bash scripts for `env`
- - Removed neovim from install scripts 
- - Added json/jsonc formatters 
- - Added `jq` to deps 
- - Fixed stall after hyprls install
-
+- Updated bash scripts for `env`
+- Removed neovim from install scripts
+- Added json/jsonc formatters
+- Added `jq` to deps
+- Fixed stall after hyprls install
 
 #### 📅 **Updated: April 13th, 2026**
 
