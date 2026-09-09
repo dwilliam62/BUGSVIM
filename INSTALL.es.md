@@ -4,42 +4,28 @@ Configuración rápida para bugsvim en Debian/Ubuntu, Arch Linux, Fedora, Gentoo
 
 ## Instalación Automatizada (Recomendada)
 
-Utiliza los scripts de instalación proporcionados para tu distribución:
+Ejecuta el instalador unificado para detectar tu distribución automáticamente:
 
-### Arch Linux
 ```bash
-bash install-arch.sh
+bash install.sh
 ```
 
-### Debian / Ubuntu
+Otras opciones disponibles:
 ```bash
-bash install-debian.sh
+# Comprobar e instalar únicamente dependencias faltantes
+bash install.sh -d
+
+# Actualizar instalación existente
+bash install.sh -u
+
+# Forzar una distribución específica (ej. Zorin, Pop!_OS, Linux Mint)
+bash install.sh --distro debian
+
+# Listar distribuciones compatibles
+bash install.sh --list-distros
 ```
 
-### Fedora
-```bash
-bash install-fedora.sh
-```
-
-### OpenSUSE
-```bash
-bash install-opensuse.sh
-```
-
-### Gentoo Linux
-```bash
-bash install-gentoo.sh
-```
-
-### Alpine Linux
-```bash
-bash install-alpine.sh
-```
-
-### Bazzite (Fedora Atomic)
-```bash
-bash install-bazzite.sh
-```
+O ejecuta directamente el script de tu distribución:
 
 ### Windows (PowerShell)
 ```powershell

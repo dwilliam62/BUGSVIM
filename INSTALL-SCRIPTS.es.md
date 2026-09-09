@@ -1,96 +1,151 @@
 # Scripts de Instalación de bugsvim
 
-Scripts de instalación automatizada para bugsvim en Arch Linux, Debian/Ubuntu, Fedora, Gentoo, OpenSUSE, Alpine, Bazzite, Windows, FreeBSD y OpenBSD.
+Sistema de instalación automatizada para bugsvim compatible con Arch Linux, Debian/Ubuntu y derivadas (Linux Mint, Pop!_OS, Zorin OS), Fedora, openSUSE, Gentoo, Alpine, Bazzite, Windows, FreeBSD y OpenBSD.
 
-## Inicio Rápido
+## Instalador Raíz Unificado (Recomendado)
 
-Elige tu distribución y ejecuta el script correspondiente:
+bugsvim proporciona un script instalador unificado `install.sh` que detecta automáticamente tu distribución o sistema operativo y ejecuta el controlador correspondiente:
 
-### Arch Linux
+```bash
+# Instalación completa con autodetección
+bash install.sh
 
+# Ejecutar tareas de actualización (sincronizar config, verificar tree-sitter-cli, limpiar cachés)
+bash install.sh -u
+
+# Comprobar e instalar solo dependencias faltantes
+bash install.sh -d
+
+# Activar modo de depuración detallado
+bash install.sh --debug
+
+# Sobrescribir detección para distribuciones derivadas (ej. Zorin, Pop!_OS, Nobara)
+bash install.sh --distro debian
+
+# Listar todas las distribuciones soportadas
+bash install.sh --list-distros
+```
+
+---
+
+## Scripts Directos por Distribución
+
+También puedes ejecutar directamente el script de tu distribución:
+
+### Arch Linux y Derivadas (EndeavourOS, Manjaro, CachyOS, Garuda)
 ```bash
 # Instalación limpia
 bash install-arch.sh
 
-# Actualizar instalación existente (sincronizar config, verificar tree-sitter-cli, limpiar cachés antiguas)
+# Actualizar instalación existente
 bash install-arch.sh -u
+
+# Comprobar e instalar dependencias faltantes
+bash install-arch.sh -d
 ```
 
-### Debian / Ubuntu
-
+### Debian, Ubuntu y Derivadas (Linux Mint, Pop!_OS, Zorin OS, Elementary)
 ```bash
 # Instalación limpia
 bash install-debian.sh
 
 # Actualizar instalación existente
 bash install-debian.sh -u
+
+# Comprobar e instalar dependencias faltantes
+bash install-debian.sh -d
 ```
 
-### Fedora
-
+### Fedora y Derivadas (Nobara, RHEL, CentOS Stream, AlmaLinux, Rocky)
 ```bash
 # Instalación limpia
 bash install-fedora.sh
 
 # Actualizar instalación existente
 bash install-fedora.sh -u
+
+# Comprobar e instalar dependencias faltantes
+bash install-fedora.sh -d
 ```
 
-### Gentoo Linux
-
-```bash
-# Instalación limpia
-bash install-gentoo.sh
-
-# Actualizar instalación existente
-bash install-gentoo.sh -u
-```
-
-### OpenSUSE
-
+### openSUSE (Tumbleweed / Leap)
 ```bash
 # Instalación limpia
 bash install-opensuse.sh
 
 # Actualizar instalación existente
 bash install-opensuse.sh -u
+
+# Comprobar e instalar dependencias faltantes
+bash install-opensuse.sh -d
+```
+
+### Gentoo Linux
+```bash
+# Instalación limpia
+bash install-gentoo.sh
+
+# Actualizar instalación existente
+bash install-gentoo.sh -u
+
+# Comprobar e instalar dependencias faltantes
+bash install-gentoo.sh -d
 ```
 
 ### Alpine Linux
-
 ```bash
 # Instalación limpia
 bash install-alpine.sh
 
 # Actualizar instalación existente
 bash install-alpine.sh -u
+
+# Comprobar e instalar dependencias faltantes
+bash install-alpine.sh -d
 ```
 
-### Bazzite (Fedora Atomic)
-
+### Bazzite (Fedora Atomic / Universal Blue)
 ```bash
 # Instalación limpia
 bash install-bazzite.sh
 
 # Actualizar instalación existente
 bash install-bazzite.sh -u
+
+# Comprobar e instalar dependencias faltantes
+bash install-bazzite.sh -d
 ```
 
 ### FreeBSD / OpenBSD
-
 ```bash
 # FreeBSD
 bash install-freebsd.sh
+bash install-freebsd.sh -d
 
 # OpenBSD
 bash install-openbsd.sh
+bash install-openbsd.sh -d
 ```
 
 ### Windows (PowerShell)
-
 ```powershell
 .\install-windows.ps1
+.\install-windows.ps1 -InstallDeps
 ```
+
+---
+
+## Opciones y Parámetros CLI
+
+| Opción Corta | Opción Larga | Descripción |
+|--------------|--------------|-------------|
+| `-f` | `--force` | Fuerza la reinstalación/reconstrucción de paquetes |
+| `-u` | `--update` | Ejecuta actualización: limpia caché de Treesitter, verifica `tree-sitter-cli`, sincroniza `nvim/` |
+| `-d` | `--deps` | Modo dependencias: comprueba e instala paquetes faltantes sin modificar la config |
+| `-D` | `--distro <nombre>` | Sobrescribe la autodetección del sistema (ej. `debian`, `arch`, `fedora`, `gentoo`) |
+| | `--list-distros` | Muestra la lista de distribuciones reconocidas y sus alias |
+| | `--debug` | Imprime mensajes de depuración detallados |
+| `-h` | `--help` | Muestra el mensaje de ayuda y sintaxis |
 
 ## Qué Hacen los Scripts
 

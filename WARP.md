@@ -12,54 +12,9 @@ This is **Tsukiyo NeoVim** (also referenced as **bugsvim**), a modern Lua-based 
 
 ```
 ├── init.lua / nvim/init.lua  # Entry point - bootstraps lazy.nvim and loads config modules
-├── nvim/
-│   ├── .luacheckrc           # Luacheck linter configuration
-│   ├── .luarc.json           # Lua-LS diagnostics configuration
-│   ├── .stylua.toml          # StyLua formatter configuration (160 width, single quotes)
-│   ├── init.lua              # Config entry point (requires config.lazy)
-│   └── lua/
-│       ├── config/           # Core NeoVim configuration
-│       │   ├── autocmds.lua  # Autocommands (yank highlight, LSP attach callbacks)
-│       │   ├── diagnostics.lua # Diagnostics appearance and float config
-│       │   ├── globals.lua   # Global variables and leader keys
-│       │   ├── keymaps.lua   # Key bindings (navigation, window splits, buffer management)
-│       │   ├── lazy.lua      # lazy.nvim bootstrap and initialization
-│       │   └── options.lua   # Editor options (indentation, search, folding, UI)
-│       ├── plugins/          # Lazy-loaded plugin specifications
-│       │   ├── blink-cmp.lua # Completion engine & snippet integration (LuaSnip)
-│       │   ├── colortheme.lua # Tokyonight theme configuration
-│       │   ├── conform.lua   # Auto-formatting engine (format-on-save)
-│       │   ├── gitsigns.lua  # Git hunk signs and inline blame
-│       │   ├── lazydev.lua   # Lua development configuration for Neovim API
-│       │   ├── lualine.lua   # Status line
-│       │   ├── markdown.lua  # Markdown enhancements (checkboxes, tables)
-│       │   ├── markdown-preview.lua # In-browser live markdown preview
-│       │   ├── mini-nvim.lua # Mini suite (pairs, surround, ai, comment, move, icons)
-│       │   ├── noice.lua     # Experimental UI replacement (cmdline, messages)
-│       │   ├── nvim-dap.lua  # DAP debugging client & UI
-│       │   ├── nvim-lint.lua # Linter orchestration
-│       │   ├── nvim-lspconfig.lua # LSP client integration
-│       │   ├── nvim-treesitter.lua # Treesitter (main branch) & textobjects
-│       │   ├── persistance.lua # Session persistence
-│       │   ├── snacks.lua    # Snacks.nvim utilities (picker, explorer, notifier)
-│       │   ├── todo-comments.lua # Todo/fixme highlight and search
-│       │   └── which-key.lua # Interactive keybinding popup helper
-│       ├── servers/          # LSP server configurations
-│       │   ├── init.lua      # Central LSP bootstrap, capabilities, & server enablement
-│       │   ├── bashls.lua    # Bash language server
-│       │   ├── clangd.lua    # C/C++ language server
-│       │   ├── cssls.lua     # CSS language server
-│       │   ├── html.lua      # HTML language server
-│       │   ├── hyprls.lua    # Hyprland config language server
-│       │   ├── lua_ls.lua    # Lua language server
-│       │   ├── nil_ls.lua    # Nix language server (Nil)
-│       │   ├── pyright.lua   # Python language server
-│       │   ├── rust_analyzer.lua # Rust language server
-│       │   ├── tailwindcss.lua # Tailwind CSS language server
-│       │   └── ts_ls.lua     # TypeScript / JavaScript language server
-│       └── utils/            # Shared utilities
-│           ├── diagnostics.lua # Diagnostic sign helpers
-│           └── lsp.lua       # LSP attachment helpers and keymaps
+├── install.sh                # Unified root installer & auto-dispatcher (--distro, --debug, --list-distros)
+├── lib/
+│   └── common.sh             # Sourced shared library for all install scripts
 ├── install-alpine.sh         # Alpine Linux installation script
 ├── install-arch.sh           # Arch Linux installation script
 ├── install-bazzite.sh        # Bazzite (Fedora Atomic) installation script

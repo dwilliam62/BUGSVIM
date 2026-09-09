@@ -4,26 +4,28 @@ Quick setup for bugsvim on Debian/Ubuntu, Arch Linux, and Fedora.
 
 ## Automated Installation (Recommended)
 
-Use the provided installation scripts for your distro:
+Run the unified installer to auto-detect your distribution:
 
-### Arch Linux
 ```bash
-bash install-arch.sh
-```
-
-### Debian/Ubuntu
-```bash
-bash install-debian.sh
+bash install.sh
 ```
 
-### Fedora
+You can also pass flags for specific tasks or overrides:
 ```bash
-bash install-fedora.sh
+# Check and install missing dependencies only
+bash install.sh -d
+
+# Run update pipeline (sync config, check tree-sitter-cli, clean legacy caches)
+bash install.sh -u
+
+# Specify distro explicitly (e.g., on Zorin, Pop!_OS, or Linux Mint)
+bash install.sh --distro debian
+
+# List supported distribution keys
+bash install.sh --list-distros
 ```
-### OpenSUSE
-```bash
-bash install-opensuse.sh
-```
+
+Alternatively, invoke your distro-specific script directly:
 
 ### Windows (PowerShell)
 

@@ -1,26 +1,50 @@
 # bugsvim Installation Scripts
 
-Automated installation scripts for bugsvim on Arch Linux, Debian/Ubuntu, Fedora, Windows, and FreeBSD.
+Automated installation system for bugsvim supporting Arch Linux, Debian/Ubuntu & derivatives (Linux Mint, Pop!_OS, Zorin OS), Fedora, openSUSE, Gentoo, Alpine, Bazzite, Windows, FreeBSD, and OpenBSD.
 
-## Quick Start
+## Unified Root Installer (Recommended)
 
-Choose your distribution and run the corresponding script:
+bugsvim provides a single root installer script `install.sh` that automatically detects your OS/distribution and dispatches to the appropriate driver:
 
-### Arch Linux
+```bash
+# Auto-detect OS and run full installation
+bash install.sh
 
+# Run update pipeline (sync config, check tree-sitter-cli, clean legacy caches)
+bash install.sh -u
+
+# Check and install all missing dependencies only
+bash install.sh -d
+
+# Enable verbose debug output
+bash install.sh --debug
+
+# Override auto-detection for derivative distributions (e.g. Zorin, Pop!_OS, Nobara)
+bash install.sh --distro debian
+
+# List all supported distribution keys
+bash install.sh --list-distros
+```
+
+---
+
+## Direct Distribution Scripts
+
+You can also run any distribution script directly:
+
+### Arch Linux & Derivatives (EndeavourOS, Manjaro, CachyOS, Garuda)
 ```bash
 # Fresh install
 bash install-arch.sh
 
-# Update existing install (sync config, check tree-sitter-cli, clean legacy caches)
+# Update existing install
 bash install-arch.sh -u
 
-# Check and install all missing dependencies
+# Check and install missing dependencies
 bash install-arch.sh -d
 ```
 
-### Debian/Ubuntu
-
+### Debian, Ubuntu & Derivatives (Linux Mint, Pop!_OS, Zorin OS, Elementary)
 ```bash
 # Fresh install
 bash install-debian.sh
@@ -28,12 +52,11 @@ bash install-debian.sh
 # Update existing install
 bash install-debian.sh -u
 
-# Check and install all missing dependencies
+# Check and install missing dependencies
 bash install-debian.sh -d
 ```
 
-### Fedora
-
+### Fedora & Derivatives (Nobara, RHEL, CentOS Stream, AlmaLinux, Rocky)
 ```bash
 # Fresh install
 bash install-fedora.sh
@@ -41,11 +64,11 @@ bash install-fedora.sh
 # Update existing install
 bash install-fedora.sh -u
 
-# Check and install all missing dependencies
+# Check and install missing dependencies
 bash install-fedora.sh -d
 ```
-### OpenSUSE
 
+### openSUSE (Tumbleweed / Leap)
 ```bash
 # Fresh install
 bash install-opensuse.sh
@@ -53,12 +76,11 @@ bash install-opensuse.sh
 # Update existing install
 bash install-opensuse.sh -u
 
-# Check and install all missing dependencies
+# Check and install missing dependencies
 bash install-opensuse.sh -d
 ```
 
 ### Gentoo Linux
-
 ```bash
 # Fresh install
 bash install-gentoo.sh
@@ -66,12 +88,23 @@ bash install-gentoo.sh
 # Update existing install
 bash install-gentoo.sh -u
 
-# Check and install all missing dependencies
+# Check and install missing dependencies
 bash install-gentoo.sh -d
 ```
 
-### Bazzite
+### Alpine Linux
+```bash
+# Fresh install
+bash install-alpine.sh
 
+# Update existing install
+bash install-alpine.sh -u
+
+# Check and install missing dependencies
+bash install-alpine.sh -d
+```
+
+### Bazzite (Fedora Atomic / Universal Blue)
 ```bash
 # Fresh install
 bash install-bazzite.sh
@@ -79,36 +112,95 @@ bash install-bazzite.sh
 # Update existing install
 bash install-bazzite.sh -u
 
-# Check and install all missing dependencies
+# Check and install missing dependencies
 bash install-bazzite.sh -d
 ```
 
-### Windows (PowerShell)
-
-```powershell
-.\install-windows.ps1
-```
-
 ### FreeBSD
-
 ```bash
 bash install-freebsd.sh
 
-# Check and install all missing dependencies
+# Check and install missing dependencies
 bash install-freebsd.sh -d
 ```
 
-> Note: FreeBSD only tested with FreeBSD v15.0
-> Script isn't complete but functions.
-
 ### OpenBSD
-
 ```bash
 bash install-openbsd.sh
 
-# Check and install all missing dependencies
+# Check and install missing dependencies
 bash install-openbsd.sh -d
 ```
+
+### Windows (PowerShell)
+```powershell
+# Fresh install
+.\install-windows.ps1
+
+# Install dependencies as well
+.\install-windows.ps1 -InstallDeps
+```
+
+---
+
+## Architecture & Layout
+
+The installation system is built around a DRY, modular shared library:
+
+```
+├── install.sh                # Unified dispatcher with OS auto-detection & flag routing
+├── lib/
+│   └── common.sh             # Sourced library: CLI parser, backup, npm manager, updates, verification
+├── install-arch.sh           # Arch driver (sources lib/common.sh)
+├── install-debian.sh         # Debian/Ubuntu driver (sources lib/common.sh)
+├── install-fedora.sh         # Fedora driver (sources lib/common.sh)
+├── install-opensuse.sh       # openSUSE driver (sources lib/common.sh)
+├── install-gentoo.sh         # Gentoo driver (sources lib/common.sh)
+├── install-alpine.sh         # Alpine driver (sources lib/common.sh)
+├── install-bazzite.sh        # Bazzite driver (sources lib/common.sh)
+├── install-freebsd.sh        # FreeBSD driver (sources lib/common.sh)
+├── install-openbsd.sh        # OpenBSD driver (sources lib/common.sh)
+└── install-windows.ps1       # Windows PowerShell installer
+```
+
+### Sourced Shared Library (`lib/common.sh`)
+Contains all shared logic:
+- **CLI Parsing**: Standardized `-f/--force`, `-u/--update`, `-d/--deps`, `-D/--distro`, `--debug`, `--list-distros`, `-h/--help`.
+- **Pre-execution Scope Safety**: Uses `main "$@"` to ensure all functions are in scope before execution paths run.
+- **NPM Prefix Configuration**: Isolates global npm packages into `~/.npm-global` to prevent permission issues without `sudo npm`.
+- **Backup System**: Automated, timestamped backups of `~/.config/nvim`, `~/.local/share/nvim`, `~/.local/state/nvim`.
+- **Shell PATH Auto-Configuration**: Automatically appends `~/.npm-global/bin` and `~/.local/bin` to `.zshrc`, `.bashrc`, or `config.fish`.
+- **Verification & Reporting**: Comprehensive post-install checks and summary diagnostics.
+
+---
+
+## CLI Options & Flags
+
+| Flag | Long Option | Description |
+|------|-------------|-------------|
+| `-f` | `--force` | Force rebuild/reinstall of optional and existing packages |
+| `-u` | `--update` | Run update tasks: cleans legacy Treesitter caches, verifies `tree-sitter-cli`, syncs `nvim/` |
+| `-d` | `--deps` | Dependency mode: checks and installs missing system, npm, and python packages without modifying config |
+| `-D` | `--distro <name>` | Override distribution detection (e.g. `debian`, `arch`, `fedora`, `gentoo`) |
+| | `--list-distros` | Display supported distribution keys and matched derivatives |
+| | `--debug` | Enable verbose debug logging output |
+| `-h` | `--help` | Show command usage and options |
+
+---
+
+## Derivative Distribution Support
+
+If you are using a distribution where the OS name or branding has been customized by developers (such as **Zorin OS**, **Linux Mint**, **Pop!_OS**, **Nobara**, **CachyOS**, **EndeavourOS**, **Tuxedo OS**):
+
+1. `install.sh` inspects both `ID` and `ID_LIKE` from `/etc/os-release`. Zorin OS, Pop!_OS, and Linux Mint will automatically map to `debian`; Nobara to `fedora`; CachyOS to `arch`.
+2. If your distribution has a completely unrecognized ID, you can explicitly specify the upstream base:
+   ```bash
+   ./install.sh --distro debian
+   ```
+3. To view all available distribution targets:
+   ```bash
+   ./install.sh --list-distros
+   ```
 
 ## What the Scripts Do
 

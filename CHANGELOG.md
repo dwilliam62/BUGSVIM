@@ -9,6 +9,11 @@
 
 #### 📅 **Updated: Sept 8th, 2026**
 
+- Huge refactor 
+  - `install.sh` root installer script 
+  - Calls distro specific installer code 
+  - About 50% reduction vs. individual per-distro scripts 
+  - Common functions lib/common.sh 
 - Added `-u` to update to nvim v12.x+
 - Added checks/install for `luacheck/luarock`
 - Added `--deps` to check for all needed pkgs and install
