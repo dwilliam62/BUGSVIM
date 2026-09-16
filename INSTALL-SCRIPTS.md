@@ -139,6 +139,12 @@ bash install-openbsd.sh -d
 
 # Install dependencies as well
 .\install-windows.ps1 -InstallDeps
+
+# Update existing install (sync config, clean legacy TS cache, ensure tree-sitter CLI)
+.\install-windows.ps1 -Update
+
+# Check and install missing dependencies
+.\install-windows.ps1 -Deps
 ```
 
 ---
@@ -224,7 +230,8 @@ Each script performs the following steps in order:
 **Windows script notes (`install-windows.ps1`):**
 - Backs up `%LOCALAPPDATA%\nvim` and `%LOCALAPPDATA%\nvim-data`
 - Copies the config to `%LOCALAPPDATA%\nvim`
-- Optional dependency install via `winget`, `npm`, and `pip` using `-InstallDeps`
+- Optional dependency install via `winget`, `npm`, and `pip` using `-InstallDeps` or `-Deps`
+- Update mode via `-Update` / `-u` (cleans legacy Treesitter cache, ensures `tree-sitter-cli`, syncs config)
 
 ## Distro-Specific Notes
 

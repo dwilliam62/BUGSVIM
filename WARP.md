@@ -37,15 +37,15 @@ This is **Tsukiyo NeoVim** (also referenced as **bugsvim**), a modern Lua-based 
 
 ### Installation & Update Scripts
 
-Each `install-<distro>.sh` script provides both full installation and modular update modes:
-- **Full Install**: `bash install-<distro>.sh`
-- **Force Reinstall**: `bash install-<distro>.sh -f` / `--force`
-- **Update Mode**: `bash install-<distro>.sh -u` / `--update`
+Each `install-<distro>.sh` script (and `install-windows.ps1` on Windows) provides full installation, dependency, and modular update modes:
+- **Full Install**: `bash install-<distro>.sh` (or `.\install-windows.ps1 -InstallDeps`)
+- **Force Reinstall**: `bash install-<distro>.sh -f` / `--force` (or `.\install-windows.ps1 -Force`)
+- **Update Mode**: `bash install-<distro>.sh -u` / `--update` (or `.\install-windows.ps1 -Update`)
   - Runs the `UPDATE_TASKS` pipeline.
   - Verifies and installs `tree-sitter-cli` if missing.
   - Cleans legacy `nvim-treesitter` caches from older `master` checkouts.
-  - Syncs the updated `nvim/` config directory to `~/.config/nvim`.
-- **Dependency Check & Install**: `bash install-<distro>.sh -d` / `--deps`
+  - Syncs the updated `nvim/` config directory to `~/.config/nvim` (or `%LOCALAPPDATA%\nvim` on Windows).
+- **Dependency Check & Install**: `bash install-<distro>.sh -d` / `--deps` (or `.\install-windows.ps1 -Deps`)
   - Checks for all required system packages, language servers, formatters, linters, npm packages, python packages, and luarocks tools.
   - Installs any missing dependencies.
   - Runs full verification.

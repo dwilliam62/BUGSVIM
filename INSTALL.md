@@ -30,13 +30,17 @@ Alternatively, invoke your distro-specific script directly:
 ### Windows (PowerShell)
 
 ```powershell
+# Fresh install (copies config)
 .\install-windows.ps1
-```
 
-Install dependencies as well:
-
-```powershell
+# Full install with dependencies (winget, build tools, LSPs, formatters)
 .\install-windows.ps1 -InstallDeps
+
+# Update existing install (sync config, clean legacy TS cache, ensure tree-sitter CLI)
+.\install-windows.ps1 -Update
+
+# Check and install missing dependencies only
+.\install-windows.ps1 -Deps
 ```
 
 These scripts will:

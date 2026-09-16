@@ -1,9 +1,16 @@
 param(
+    [Alias('d')]
+    [switch]$Deps,
     [switch]$InstallDeps,
+    [Alias('u')]
+    [switch]$Update,
+    [Alias('f')]
     [switch]$Force,
     [switch]$NoBackup,
     [switch]$SkipRemove,
-    [switch]$SkipVerify
+    [switch]$SkipVerify,
+    [Alias('h')]
+    [switch]$Help
 )
 
 $ErrorActionPreference = 'Stop'
@@ -12,6 +19,33 @@ function Write-Info($Message) { Write-Host $Message -ForegroundColor Cyan }
 function Write-Ok($Message) { Write-Host $Message -ForegroundColor Green }
 function Write-Warn($Message) { Write-Host $Message -ForegroundColor Yellow }
 function Write-Err($Message) { Write-Host $Message -ForegroundColor Red }
+
+function Show-Usage {
+    Write-Host @"
+Usage: install-windows.ps1 [options]
+
+Options:
+  -u, -Update         Run update tasks (clean legacy Treesitter caches, install/verify tree-sitter-cli, sync config)
+  -d, -Deps           Check for all dependencies and install missing ones (winget, build tools, npm, pip)
+  -InstallDeps        Perform full install including dependencies
+  -f, -Force          Force actions without confirmation prompts
+  -NoBackup           Skip backup of existing configuration
+  -SkipRemove         Skip removing existing configuration/data
+  -SkipVerify         Skip post-installation verification
+  -h, -Help           Show this help message
+
+Examples:
+  .\install-windows.ps1                # Fresh install (backup & copy config)
+  .\install-windows.ps1 -InstallDeps   # Full install with dependencies
+  .\install-windows.ps1 -Update        # Update config, clean legacy TS cache, ensure tree-sitter CLI
+  .\install-windows.ps1 -Deps          # Install missing dependencies only
+"@
+}
+
+if ($Help) {
+    Show-Usage
+    exit 0
+}
 
 function Test-Command($Name) {
     return [bool](Get-Command $Name -ErrorAction SilentlyContinue)
@@ -22,6 +56,7 @@ function Confirm-Action($Prompt) {
     $reply = Read-Host $Prompt
     return $reply -match '^[Yy]'
 }
+
 function Add-ToPath($NewPath, $Scope = 'User') {
     if (-not (Test-Path $NewPath)) { return }
     $current = [Environment]::GetEnvironmentVariable('Path', $Scope)
@@ -35,11 +70,6 @@ function Add-ToPath($NewPath, $Scope = 'User') {
         $env:Path = $env:Path + ';' + $NewPath
     }
 }
-
-Write-Info '==============================================================='
-Write-Info '  bugsvim - Windows Installation (PowerShell)'
-Write-Info '==============================================================='
-Write-Host ''
 
 if (-not $IsWindows) {
     Write-Warn 'This script is intended for Windows.'
@@ -58,63 +88,87 @@ if (-not (Test-Path $sourceConfig)) {
 $configDir = Join-Path $env:LOCALAPPDATA 'nvim'
 $dataDir = Join-Path $env:LOCALAPPDATA 'nvim-data'
 
-Write-Info 'Checking existing NeoVim configuration...'
-$hasConfig = (Test-Path $configDir) -or (Test-Path $dataDir)
-
-if ($hasConfig) {
-    try {
-        Stop-Process -Name nvim -Force -ErrorAction SilentlyContinue
-    } catch {
-        Write-Warn 'WARN: Failed to stop running nvim processes'
-    }
-    if (-not $NoBackup) {
-        if (Confirm-Action 'Backup existing config? (y/n)') {
-            $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-            $backupDir = Join-Path $HOME "neovim-backup-$timestamp"
-            New-Item -ItemType Directory -Path $backupDir -Force | Out-Null
-
-            if (Test-Path $configDir) {
-                Copy-Item -Path $configDir -Destination (Join-Path $backupDir 'nvim') -Recurse -Force
-            }
-            if (Test-Path $dataDir) {
-                Copy-Item -Path $dataDir -Destination (Join-Path $backupDir 'nvim-data') -Recurse -Force
-            }
-            Write-Ok "OK: Backup created: $backupDir"
-        } else {
-            Write-Warn 'Skipping backup'
+function Remove-LegacyTreesitter {
+    Write-Info 'Checking for legacy nvim-treesitter cache...'
+    $legacyTs = Join-Path $dataDir 'lazy\nvim-treesitter'
+    if (Test-Path $legacyTs) {
+        Write-Warn "Removing legacy nvim-treesitter cache ($legacyTs) for clean main branch migration..."
+        try {
+            Remove-Item -Path $legacyTs -Recurse -Force -ErrorAction Stop
+            Write-Ok 'OK: Legacy nvim-treesitter cache removed'
+        } catch {
+            Write-Warn "WARN: Failed to remove $legacyTs (files may be in use)"
         }
-    }
-
-    if (-not $SkipRemove) {
-        Write-Info 'Removing existing NeoVim config and data...'
-        if (Test-Path $configDir) {
-            try {
-                Remove-Item -Path $configDir -Recurse -Force -ErrorAction Stop
-            } catch {
-                Write-Warn "WARN: Failed to remove $configDir (files may be in use)"
-            }
-        }
-        if (Test-Path $dataDir) {
-            try {
-                Remove-Item -Path $dataDir -Recurse -Force -ErrorAction Stop
-            } catch {
-                Write-Warn "WARN: Failed to remove $dataDir (files may be in use)"
-            }
-        }
-        Write-Ok 'OK: Cleanup attempted'
     } else {
-        Write-Warn 'Skipping removal of existing config/data'
+        Write-Ok 'OK: No legacy nvim-treesitter directory found'
     }
-} else {
-    Write-Ok 'OK: No existing NeoVim configuration found'
 }
 
-Write-Info 'Copying bugsvim config to LocalAppData...'
-New-Item -ItemType Directory -Path $configDir -Force | Out-Null
-Copy-Item -Path $sourceConfig\* -Destination $configDir -Recurse -Force
-Write-Ok "OK: bugsvim config copied to $configDir"
+function Install-TreeSitterCli {
+    Write-Info 'Checking tree-sitter CLI...'
+    if (-not (Test-Command 'tree-sitter')) {
+        Write-Warn 'tree-sitter CLI not found. Installing...'
+        $installed = $false
+        if (Test-Command 'winget') {
+            try {
+                Write-Info 'Installing tree-sitter-cli via winget...'
+                winget install --id tree-sitter.tree-sitter-cli -e --source winget --accept-source-agreements --accept-package-agreements | Out-Null
+                if (-not (Test-Command 'tree-sitter')) {
+                    $tsExe = Get-ChildItem -Path "$env:LOCALAPPDATA\Microsoft\WinGet\Packages" -Recurse -Filter tree-sitter.exe -ErrorAction SilentlyContinue |
+                        Select-Object -First 1 -ExpandProperty FullName
+                    if ($tsExe) {
+                        Add-ToPath (Split-Path -Parent $tsExe)
+                    }
+                }
+                if (Test-Command 'tree-sitter') {
+                    $installed = $true
+                    Write-Ok 'OK: tree-sitter-cli installed via winget'
+                }
+            } catch {
+                Write-Warn 'WARN: Failed to install tree-sitter-cli via winget'
+            }
+        }
+        if (-not $installed -and (Test-Command 'cargo')) {
+            try {
+                Write-Info 'Installing tree-sitter-cli via cargo...'
+                cargo install tree-sitter-cli | Out-Null
+                if (Test-Command 'tree-sitter') {
+                    $installed = $true
+                    Write-Ok 'OK: tree-sitter-cli installed via cargo'
+                }
+            } catch {
+                Write-Warn 'WARN: Failed to install tree-sitter-cli via cargo'
+            }
+        }
+        if (-not $installed -and (Test-Command 'npm')) {
+            try {
+                Write-Info 'Installing tree-sitter-cli via npm...'
+                npm install -g tree-sitter-cli | Out-Null
+                if (Test-Command 'tree-sitter') {
+                    $installed = $true
+                    Write-Ok 'OK: tree-sitter-cli installed via npm'
+                }
+            } catch {
+                Write-Warn 'WARN: Failed to install tree-sitter-cli via npm'
+            }
+        }
+        if (-not (Test-Command 'tree-sitter')) {
+            Write-Warn 'WARN: tree-sitter CLI could not be installed automatically (required for Treesitter parser compilation in Neovim 0.12+)'
+        }
+    } else {
+        $tsVer = (& tree-sitter --version 2>$null)
+        Write-Ok "OK: tree-sitter CLI available: $tsVer"
+    }
+}
 
-if ($InstallDeps) {
+function Sync-NeoVimConfig {
+    Write-Info "Syncing bugsvim config to $configDir..."
+    New-Item -ItemType Directory -Path $configDir -Force | Out-Null
+    Copy-Item -Path $sourceConfig\* -Destination $configDir -Recurse -Force
+    Write-Ok "OK: bugsvim config copied to $configDir"
+}
+
+function Install-AllDependencies {
     Write-Info 'Installing dependencies (winget/npm/pip)...'
     if (-not (Test-Command 'gcc') -or -not (Test-Command 'make')) {
         Write-Info 'Installing build tools (gcc/make) via MSYS2...'
@@ -190,6 +244,7 @@ if ($InstallDeps) {
             'BurntSushi.ripgrep.MSVC',
             'sharkdp.fd',
             'jqlang.jq',
+            'tree-sitter.tree-sitter-cli',
             'OpenJS.NodeJS.LTS',
             'Python.Python.3.12',
             'LLVM.LLVM',
@@ -213,6 +268,17 @@ if ($InstallDeps) {
                 Add-ToPath (Split-Path -Parent $fdExe)
                 if (Test-Command 'fd') {
                     Write-Ok 'OK: fd is now on PATH'
+                }
+            }
+        }
+
+        if (-not (Test-Command 'tree-sitter')) {
+            $tsExe = Get-ChildItem -Path "$env:LOCALAPPDATA\Microsoft\WinGet\Packages" -Recurse -Filter tree-sitter.exe -ErrorAction SilentlyContinue |
+                Select-Object -First 1 -ExpandProperty FullName
+            if ($tsExe) {
+                Add-ToPath (Split-Path -Parent $tsExe)
+                if (Test-Command 'tree-sitter') {
+                    Write-Ok 'OK: tree-sitter is now on PATH'
                 }
             }
         }
@@ -265,9 +331,12 @@ if ($InstallDeps) {
     } else {
         Write-Warn 'WARN: Failed to install ruff/pyright'
     }
+
+    # Verify and install tree-sitter CLI fallback if needed
+    Install-TreeSitterCli
 }
 
-if (-not $SkipVerify) {
+function Test-Installation {
     Write-Host ''
     Write-Info 'Verifying installation...'
 
@@ -279,10 +348,10 @@ if (-not $SkipVerify) {
     }
 
     $commands = @(
-        'git', 'rg', 'fd', 'node', 'npm', 'python',
+        'git', 'rg', 'fd', 'jq', 'node', 'npm', 'python',
         'clangd', 'lua-language-server', 'pyright', 'ruff',
         'stylua', 'shfmt', 'clang-format', 'prettier', 'prettierd',
-        'gcc', 'make', 'zig'
+        'gcc', 'make', 'zig', 'tree-sitter'
     )
     foreach ($cmd in $commands) {
         if (Test-Command $cmd) {
@@ -291,6 +360,104 @@ if (-not $SkipVerify) {
             Write-Warn "WARN: $cmd (missing)"
         }
     }
+}
+
+if ($Update) {
+    Write-Info '==============================================================='
+    Write-Info '  bugsvim - Windows Update Tasks'
+    Write-Info '==============================================================='
+    Write-Host ''
+    Remove-LegacyTreesitter
+    Write-Host ''
+    Install-TreeSitterCli
+    Write-Host ''
+    Sync-NeoVimConfig
+    Write-Host ''
+    Write-Ok 'OK: All update tasks completed successfully!'
+    Write-Host "Next steps: Launch 'nvim' and run ':Lazy sync' or ':TSUpdate' if needed."
+    Write-Host ''
+    exit 0
+}
+
+if ($Deps) {
+    Write-Info '==============================================================='
+    Write-Info '  bugsvim - Windows Dependency Installation'
+    Write-Info '==============================================================='
+    Write-Host ''
+    Install-AllDependencies
+    if (-not $SkipVerify) {
+        Test-Installation
+    }
+    Write-Host ''
+    Write-Ok 'OK: Dependency tasks completed!'
+    exit 0
+}
+
+Write-Info '==============================================================='
+Write-Info '  bugsvim - Windows Installation (PowerShell)'
+Write-Info '==============================================================='
+Write-Host ''
+
+Write-Info 'Checking existing NeoVim configuration...'
+$hasConfig = (Test-Path $configDir) -or (Test-Path $dataDir)
+
+if ($hasConfig) {
+    try {
+        Stop-Process -Name nvim -Force -ErrorAction SilentlyContinue
+    } catch {
+        Write-Warn 'WARN: Failed to stop running nvim processes'
+    }
+    if (-not $NoBackup) {
+        if (Confirm-Action 'Backup existing config? (y/n)') {
+            $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+            $backupDir = Join-Path $HOME "neovim-backup-$timestamp"
+            New-Item -ItemType Directory -Path $backupDir -Force | Out-Null
+
+            if (Test-Path $configDir) {
+                Copy-Item -Path $configDir -Destination (Join-Path $backupDir 'nvim') -Recurse -Force
+            }
+            if (Test-Path $dataDir) {
+                Copy-Item -Path $dataDir -Destination (Join-Path $backupDir 'nvim-data') -Recurse -Force
+            }
+            Write-Ok "OK: Backup created: $backupDir"
+        } else {
+            Write-Warn 'Skipping backup'
+        }
+    }
+
+    if (-not $SkipRemove) {
+        Write-Info 'Removing existing NeoVim config and data...'
+        if (Test-Path $configDir) {
+            try {
+                Remove-Item -Path $configDir -Recurse -Force -ErrorAction Stop
+            } catch {
+                Write-Warn "WARN: Failed to remove $configDir (files may be in use)"
+            }
+        }
+        if (Test-Path $dataDir) {
+            try {
+                Remove-Item -Path $dataDir -Recurse -Force -ErrorAction Stop
+            } catch {
+                Write-Warn "WARN: Failed to remove $dataDir (files may be in use)"
+            }
+        }
+        Write-Ok 'OK: Cleanup attempted'
+    } else {
+        Write-Warn 'Skipping removal of existing config/data'
+        Remove-LegacyTreesitter
+    }
+} else {
+    Write-Ok 'OK: No existing NeoVim configuration found'
+}
+
+Sync-NeoVimConfig
+
+if ($InstallDeps) {
+    Install-AllDependencies
+}
+
+if (-not $SkipVerify) {
+    Test-Installation
 }
 
 Write-Host ''

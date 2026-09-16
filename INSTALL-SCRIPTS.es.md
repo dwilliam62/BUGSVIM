@@ -129,8 +129,17 @@ bash install-openbsd.sh -d
 
 ### Windows (PowerShell)
 ```powershell
+# Instalación limpia
 .\install-windows.ps1
+
+# Instalar también dependencias
 .\install-windows.ps1 -InstallDeps
+
+# Actualizar instalación existente (sincronizar config, limpiar caché antigua de TS, asegurar tree-sitter CLI)
+.\install-windows.ps1 -Update
+
+# Comprobar e instalar dependencias faltantes
+.\install-windows.ps1 -Deps
 ```
 
 ---

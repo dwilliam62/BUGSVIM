@@ -29,12 +29,17 @@ O ejecuta directamente el script de tu distribución:
 
 ### Windows (PowerShell)
 ```powershell
+# Instalación limpia (copia configuración)
 .\install-windows.ps1
-```
 
-Instalar dependencias también:
-```powershell
+# Instalación completa con dependencias (winget, build tools, LSPs, formateadores)
 .\install-windows.ps1 -InstallDeps
+
+# Actualizar instalación existente (sincronizar config, limpiar caché antigua de TS, asegurar tree-sitter CLI)
+.\install-windows.ps1 -Update
+
+# Comprobar e instalar únicamente dependencias faltantes
+.\install-windows.ps1 -Deps
 ```
 
 Estos scripts se encargarán de:
