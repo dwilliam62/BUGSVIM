@@ -7,18 +7,21 @@
 
 # 🚀 **Current Release - v1.0.5**
 
-#### 📅 **Updated: Sept 8th, 2026**
+#### 📅 **Updated: Sept, 2026**
 
-- Huge refactor 
-  - `install.sh` root installer script 
-  - Calls distro specific installer code 
-  - About 50% reduction vs. individual per-distro scripts 
-  - Common functions lib/common.sh 
+- Arch reported bash-server not installed
+  - It only checked via `npm`
+  - Fixed check for Arch via pacman
+- Huge refactor
+  - `install.sh` root installer script
+  - Calls distro specific installer code
+  - About 50% reduction vs. individual per-distro scripts
+  - Common functions lib/common.sh
 - Added `-u` to update to nvim v12.x+
 - Added checks/install for `luacheck/luarock`
 - Added `--deps` to check for all needed pkgs and install
 
-#### 📅 **Updated: August 24th, 2026**
+#### 📅 **Updated: August, 2026**
 
 - Updated bash scripts for `env`
 - Removed neovim from install scripts
@@ -26,23 +29,21 @@
 - Added `jq` to deps
 - Fixed stall after hyprls install
 
-#### 📅 **Updated: April 13th, 2026**
+#### 📅 **Updated: April, 2026**
 
 - Added:
   - Install script for Bazzite linux
 
-#### 📅 **Updated: January 16th, 2026**
+#### 📅 **Updated: January, 2026**
 
 - Added:
   - Install script for Alpine linux
 
-#### 📅 **Updated: December 23st, 2025**
+#### 📅 **Updated: December, 2025**
 
 - Added:
   - Install script for gentoo
     - First pass
-
-#### 📅 **Updated: December 21st, 2025**
 
 - 🛠️ Fixed:
   - `blink-cmp` set defaults for completion

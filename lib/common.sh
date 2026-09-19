@@ -204,7 +204,47 @@ npm_pkg_installed() {
     return 1
   fi
   local prefix="${NPM_PREFIX:-$HOME/.npm-global}"
-  npm list -g --prefix "$prefix" "$1" >/dev/null 2>&1
+  npm list -g --prefix "$prefix" "$1" >/dev/null 2>&1 || npm list -g "$1" >/dev/null 2>&1
+}
+
+# Executables provided by npm packages. Distros may ship the same tooling as
+# native packages (e.g. Arch installs bash-language-server via pacman), so
+# verification must not assume npm is the only valid source.
+npm_pkg_binaries() {
+  case "$1" in
+  "@fsouza/prettierd") printf '%s\n' prettierd ;;
+  "vscode-langservers-extracted")
+    printf '%s\n' vscode-html-language-server vscode-css-language-server \
+      vscode-json-language-server vscode-eslint-language-server
+    ;;
+  "bash-language-server") printf '%s\n' bash-language-server ;;
+  "@johnnymorganz/stylua-bin") printf '%s\n' stylua ;;
+  "pyright") printf '%s\n' pyright pyright-langserver ;;
+  "neovim") ;; # node host library, provides no executable
+  *) printf '%s\n' "$1" ;;
+  esac
+}
+
+npm_pkg_binary_available() {
+  local bin
+  while read -r bin; do
+    [ -n "$bin" ] || continue
+    if command -v "$bin" >/dev/null 2>&1; then
+      return 0
+    fi
+  done < <(npm_pkg_binaries "$1")
+  return 1
+}
+
+# Echoes how a package is provided: 'npm', 'system', or 'none'.
+detect_pkg_source() {
+  if npm_pkg_installed "$1"; then
+    printf 'npm\n'
+  elif npm_pkg_binary_available "$1"; then
+    printf 'system\n'
+  else
+    printf 'none\n'
+  fi
 }
 
 install_npm_packages() {
@@ -431,20 +471,24 @@ verify_installation() {
   done
 
   echo ""
-  echo "Checking npm packages:"
-  if command -v npm &>/dev/null; then
-    local prefix="${NPM_PREFIX:-$HOME/.npm-global}"
-    for pkg in "@fsouza/prettierd" "vscode-langservers-extracted" "bash-language-server"; do
-      if npm list -g --prefix "$prefix" "$pkg" &>/dev/null || npm list -g "$pkg" &>/dev/null; then
-        echo -e "  ${GREEN}✓${NC} $pkg"
-      else
-        echo -e "  ${RED}✗${NC} $pkg (missing)"
-        MISSING=1
-      fi
-    done
-  else
-    echo -e "  ${YELLOW}○${NC} npm not available"
+  echo "Checking language server packages:"
+  if ! command -v npm &>/dev/null; then
+    echo -e "  ${YELLOW}○${NC} npm not available (checking for system-provided binaries only)"
   fi
+  for pkg in "@fsouza/prettierd" "vscode-langservers-extracted" "bash-language-server"; do
+    case "$(detect_pkg_source "$pkg")" in
+    npm)
+      echo -e "  ${GREEN}✓${NC} $pkg (npm)"
+      ;;
+    system)
+      echo -e "  ${GREEN}✓${NC} $pkg (system package)"
+      ;;
+    *)
+      echo -e "  ${RED}✗${NC} $pkg (missing)"
+      MISSING=1
+      ;;
+    esac
+  done
 
   echo ""
   echo "Checking tree-sitter CLI:"
