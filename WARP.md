@@ -22,6 +22,7 @@ This is **Tsukiyo NeoVim** (also referenced as **bugsvim**), a modern Lua-based 
 ├── install-fedora.sh         # Fedora Linux installation script
 ├── install-freebsd.sh        # FreeBSD installation script
 ├── install-gentoo.sh         # Gentoo Linux installation script
+├── install-netbsd.sh         # NetBSD installation script
 ├── install-openbsd.sh        # OpenBSD installation script
 ├── install-opensuse.sh       # OpenSUSE installation script
 └── install-windows.ps1       # Windows PowerShell installation script

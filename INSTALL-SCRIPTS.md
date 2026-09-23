@@ -132,6 +132,14 @@ bash install-openbsd.sh
 bash install-openbsd.sh -d
 ```
 
+### NetBSD
+```bash
+bash install-netbsd.sh
+
+# Check and install missing dependencies
+bash install-netbsd.sh -d
+```
+
 ### Windows (PowerShell)
 ```powershell
 # Fresh install
@@ -165,6 +173,7 @@ The installation system is built around a DRY, modular shared library:
 ├── install-alpine.sh         # Alpine driver (sources lib/common.sh)
 ├── install-bazzite.sh        # Bazzite driver (sources lib/common.sh)
 ├── install-freebsd.sh        # FreeBSD driver (sources lib/common.sh)
+├── install-netbsd.sh         # NetBSD driver (sources lib/common.sh)
 ├── install-openbsd.sh        # OpenBSD driver (sources lib/common.sh)
 └── install-windows.ps1       # Windows PowerShell installer
 ```

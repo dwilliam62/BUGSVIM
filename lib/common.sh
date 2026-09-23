@@ -44,6 +44,7 @@ SUPPORTED_DISTROS=(
   "bazzite:Bazzite, Fedora Silverblue/Kinoite, Universal Blue"
   "freebsd:FreeBSD"
   "openbsd:OpenBSD"
+  "netbsd:NetBSD"
 )
 
 # ================================================================================================

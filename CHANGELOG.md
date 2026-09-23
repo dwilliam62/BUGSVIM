@@ -9,6 +9,7 @@
 
 #### 📅 **Updated: Sept, 2026**
 
+- Added: `netBSD` to supported distros (v11.x)
 - Arch reported bash-server not installed
   - It only checked via `npm`
   - Fixed check for Arch via pacman

@@ -1,6 +1,6 @@
 # Guía de Instalación de bugsvim
 
-Configuración rápida para bugsvim en Debian/Ubuntu, Arch Linux, Fedora, Gentoo, OpenSUSE, Alpine, Bazzite, Windows, FreeBSD y OpenBSD.
+Configuración rápida para bugsvim en Debian/Ubuntu, Arch Linux, Fedora, Gentoo, OpenSUSE, Alpine, Bazzite, Windows, FreeBSD, OpenBSD y NetBSD.
 
 ## Instalación Automatizada (Recomendada)
 

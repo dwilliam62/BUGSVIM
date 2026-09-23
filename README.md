@@ -156,7 +156,7 @@ bash install-bazzite.sh
 bash install-bazzite.sh -u
 ```
 
-#### FreeBSD / OpenBSD
+#### FreeBSD / OpenBSD / NetBSD
 
 ```bash
 # FreeBSD
@@ -164,6 +164,9 @@ bash install-freebsd.sh
 
 # OpenBSD
 bash install-openbsd.sh
+
+# NetBSD
+bash install-netbsd.sh
 ```
 
 #### Windows (PowerShell)

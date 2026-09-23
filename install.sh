@@ -53,6 +53,9 @@ canonicalize_distro() {
   openbsd)
     echo "openbsd"
     ;;
+  netbsd)
+    echo "netbsd"
+    ;;
   *)
     echo "$lower"
     ;;
@@ -68,6 +71,9 @@ detect_system_distro() {
     return 0
   elif [ "$uname_s" = "OpenBSD" ]; then
     echo "openbsd"
+    return 0
+  elif [ "$uname_s" = "NetBSD" ]; then
+    echo "netbsd"
     return 0
   fi
 
