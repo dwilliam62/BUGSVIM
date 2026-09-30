@@ -48,6 +48,11 @@
   - All three BSD scripts now install ruff/pyright (previously missing entirely) and pass `--break-system-packages`, since BSD Python is marked externally managed
   - `update_treesitter_cli` sets `LIBCLANG_PATH` when libclang lives in a versioned llvm directory (`/usr/local/llvm*/lib`), which makes the cargo fallback succeed on OpenBSD (verified: tree-sitter-cli 0.27.0)
   - Package-install failures now log the package manager's own error line instead of a generic "unavailable"
+- Debian/Ubuntu validated with a full install on a real trixie VM
+  - `fd-find` installs `fdfind` (or `fd-find`), while the binary actually named `fd` sits outside PATH in `/usr/lib/cargo/bin`, so `fd` was never resolvable; the installer now locates any of those (including via `dpkg -L`), installs `fd-find` if needed, and links `~/.local/bin/fd`
+  - `configure_shell_path` only looked for `~/.npm-global/bin`, so a shell rc that already had that line never received `~/.local/bin` - leaving ruff, pyright, lua-language-server, hyprls and the fd link installed but unreachable. Both locations are now checked separately and the missing entry is added
+  - `backup_neovim_config` no longer aborts non-interactive installs: the prompt is skipped when stdin is not a tty and the existing config is backed up automatically instead of dying on EOF under `set -e`
+  - tree-sitter CLI is now version-checked: Debian trixie packages 0.22.6 while nvim-treesitter requires >= 0.26.1 to compile parsers. A newer prebuilt Linux CLI is downloaded into `~/.local/bin` (cargo build stays as the fallback), and `:TSInstall` now compiles parsers successfully
 
 #### 📅 **Updated: August, 2026**
 

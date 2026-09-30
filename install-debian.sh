@@ -81,6 +81,66 @@ build_hyprls() {
   fi
 }
 
+# Debian/Ubuntu package fd as 'fd-find', and depending on the release the
+# binary is called 'fdfind' or 'fd-find' - the one named 'fd' ships outside PATH
+# in /usr/lib/cargo/bin. Link whichever exists to 'fd' in ~/.local/bin so the
+# config and the verification step can find it.
+find_fd_binary() {
+  local candidate
+  for candidate in \
+    "$(command -v fdfind 2>/dev/null || true)" \
+    "$(command -v fd-find 2>/dev/null || true)" \
+    /usr/bin/fdfind \
+    /usr/bin/fd-find \
+    /usr/lib/cargo/bin/fd \
+    /usr/lib/cargo/bin/fd-find \
+    /usr/local/lib/cargo/bin/fd; do
+    if [ -n "$candidate" ] && [ -x "$candidate" ]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  # Last resort: ask dpkg what the package actually installed
+  if command -v dpkg >/dev/null 2>&1; then
+    candidate="$(dpkg -L fd-find 2>/dev/null | grep -E '/(fd|fdfind|fd-find)$' | head -n 1 || true)"
+    if [ -n "$candidate" ] && [ -x "$candidate" ]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
+link_fd_binary() {
+  if command -v fd &>/dev/null; then
+    log_success "✓ fd already available ($(command -v fd))"
+    return 0
+  fi
+
+  local fd_bin=""
+  fd_bin="$(find_fd_binary || true)"
+
+  if [ -z "$fd_bin" ]; then
+    log_info "Installing fd-find (Debian/Ubuntu package fd under that name)..."
+    install_packages_resilient "sudo apt-get install -y" fd-find || true
+    fd_bin="$(find_fd_binary || true)"
+  fi
+
+  if [ -z "$fd_bin" ]; then
+    log_warn "⚠ Unable to locate the fd binary; install 'fd-find' manually and link it to 'fd'"
+    FAILED_PACKAGES+=("fd")
+    return 1
+  fi
+
+  log_info "Linking fd -> ${fd_bin}..."
+  mkdir -p "$HOME/.local/bin"
+  ln -sf "$fd_bin" "$HOME/.local/bin/fd"
+  export PATH="${HOME}/.local/bin:$PATH"
+  log_success "✓ fd available as ~/.local/bin/fd -> ${fd_bin}"
+}
+
 check_and_install_deps() {
   echo -e "${BLUE}╔════════════════════════════════════════════════════════════════╗${NC}"
   echo -e "${BLUE}║   bugsvim - Checking and Installing Dependencies (Debian/Ubuntu)║${NC}"
@@ -129,6 +189,8 @@ check_and_install_deps() {
 
   # Debian/Ubuntu do not package lua-language-server, so use the upstream release
   install_lua_language_server_from_release || true
+
+  link_fd_binary
 
   # Luacheck fallback via luarocks
   if ! command -v luacheck &>/dev/null && command -v luarocks &>/dev/null; then

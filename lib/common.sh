@@ -432,34 +432,124 @@ clean_legacy_treesitter() {
   fi
 }
 
-update_treesitter_cli() {
-  log_info "Checking tree-sitter CLI..."
-  if ! command -v tree-sitter >/dev/null 2>&1; then
-    log_warn "tree-sitter CLI not found. Installing..."
-    if command -v cargo >/dev/null 2>&1; then
-      # tree-sitter-cli's build uses bindgen, which needs libclang at build time.
-      # OpenBSD/NetBSD keep it under a versioned llvm directory.
-      if [ -z "${LIBCLANG_PATH:-}" ]; then
-        local libclang_dir
-        for libclang_dir in /usr/local/llvm*/lib /usr/local/lib /usr/lib/llvm-*/lib /usr/lib64/llvm*/lib; do
-          if compgen -G "${libclang_dir}/libclang.so*" >/dev/null; then
-            export LIBCLANG_PATH="$libclang_dir"
-            log_debug "Using LIBCLANG_PATH=${LIBCLANG_PATH}"
-            break
-          fi
-        done
-      fi
-      log_info "Installing tree-sitter-cli via cargo..."
-      if cargo install tree-sitter-cli --root "${HOME}/.local"; then
-        log_success "✓ tree-sitter-cli installed via cargo"
-        export PATH="${HOME}/.local/bin:$PATH"
+# nvim-treesitter's main branch needs a recent CLI to compile parsers, and
+# several distributions ship something much older (Debian trixie packages 0.22.6,
+# Ubuntu 24.04 is older still).
+TS_CLI_MIN_VERSION="0.26.1"
+
+version_is_at_least() {
+  local have="$1" want="$2"
+  [ "$(printf '%s\n%s\n' "$want" "$have" | sort -V | head -n 1)" = "$want" ]
+}
+
+treesitter_cli_version() {
+  command -v tree-sitter >/dev/null 2>&1 || return 1
+  tree-sitter --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n 1
+}
+
+# tree-sitter publishes prebuilt Linux CLI archives, which is far quicker than
+# compiling the CLI from source.
+install_treesitter_cli_prebuilt() {
+  [ "$(uname -s)" = "Linux" ] || return 1
+
+  local arch
+  case "$(uname -m)" in
+  x86_64 | amd64) arch="x64" ;;
+  aarch64 | arm64) arch="arm64" ;;
+  armv7l | armv6l | arm) arch="arm" ;;
+  i?86) arch="x86" ;;
+  ppc64 | ppc64le) arch="powerpc64" ;;
+  *) return 1 ;;
+  esac
+
+  local tag
+  tag="$(curl -fsSL --max-time 30 https://api.github.com/repos/tree-sitter/tree-sitter/releases/latest 2>/dev/null |
+    sed -n 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)"
+  if [ -z "$tag" ]; then
+    return 1
+  fi
+
+  local tmp
+  tmp="$(mktemp -d)"
+  local url="https://github.com/tree-sitter/tree-sitter/releases/download/${tag}/tree-sitter-cli-linux-${arch}.zip"
+  log_info "Downloading tree-sitter CLI ${tag} (${arch})..."
+
+  if curl -fsSL --max-time 300 -o "${tmp}/ts.zip" "$url"; then
+    if command -v unzip >/dev/null 2>&1; then
+      unzip -o -q "${tmp}/ts.zip" -d "${tmp}/bin" || true
+    elif command -v python3 >/dev/null 2>&1; then
+      python3 -c 'import sys, zipfile; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])' "${tmp}/ts.zip" "${tmp}/bin" || true
+    fi
+
+    if [ -f "${tmp}/bin/tree-sitter" ]; then
+      mkdir -p "${HOME}/.local/bin"
+      cp "${tmp}/bin/tree-sitter" "${HOME}/.local/bin/tree-sitter"
+      chmod +x "${HOME}/.local/bin/tree-sitter"
+      export PATH="${HOME}/.local/bin:$PATH"
+
+      local installed_version
+      installed_version="$(treesitter_cli_version || true)"
+      if [ -n "$installed_version" ] && version_is_at_least "$installed_version" "$TS_CLI_MIN_VERSION"; then
+        rm -rf "$tmp"
+        log_success "✓ tree-sitter CLI ${installed_version} installed to ~/.local/bin"
         return 0
       fi
     fi
-    log_warn "○ Unable to install tree-sitter-cli automatically. Please install via system package or cargo."
-  else
-    log_success "✓ tree-sitter CLI available: $(tree-sitter --version 2>/dev/null || echo 'installed')"
   fi
+
+  rm -rf "$tmp"
+  return 1
+}
+
+install_treesitter_cli_cargo() {
+  command -v cargo >/dev/null 2>&1 || return 1
+
+  # tree-sitter-cli's build uses bindgen, which needs libclang at build time.
+  # OpenBSD/NetBSD keep it under a versioned llvm directory.
+  if [ -z "${LIBCLANG_PATH:-}" ]; then
+    local libclang_dir
+    for libclang_dir in /usr/local/llvm*/lib /usr/local/lib /usr/lib/llvm-*/lib /usr/lib64/llvm*/lib; do
+      if compgen -G "${libclang_dir}/libclang.so*" >/dev/null; then
+        export LIBCLANG_PATH="$libclang_dir"
+        log_debug "Using LIBCLANG_PATH=${LIBCLANG_PATH}"
+        break
+      fi
+    done
+  fi
+
+  log_info "Installing tree-sitter-cli via cargo (this can take a few minutes)..."
+  if cargo install tree-sitter-cli --root "${HOME}/.local"; then
+    export PATH="${HOME}/.local/bin:$PATH"
+    log_success "✓ tree-sitter-cli $(treesitter_cli_version || echo '') installed via cargo"
+    return 0
+  fi
+  return 1
+}
+
+update_treesitter_cli() {
+  log_info "Checking tree-sitter CLI..."
+
+  local ts_version=""
+  ts_version="$(treesitter_cli_version || true)"
+
+  if [ -n "$ts_version" ] && version_is_at_least "$ts_version" "$TS_CLI_MIN_VERSION"; then
+    log_success "✓ tree-sitter CLI available: $(tree-sitter --version 2>/dev/null || echo 'installed')"
+    return 0
+  fi
+
+  if [ -n "$ts_version" ]; then
+    log_warn "tree-sitter CLI ${ts_version} is older than the required v${TS_CLI_MIN_VERSION}; installing a newer build..."
+  else
+    log_warn "tree-sitter CLI not found. Installing..."
+  fi
+
+  if install_treesitter_cli_prebuilt || install_treesitter_cli_cargo; then
+    return 0
+  fi
+
+  log_warn "○ tree-sitter CLI v${TS_CLI_MIN_VERSION}+ is required by nvim-treesitter"
+  log_warn "  Install it manually with: cargo install tree-sitter-cli"
+  return 0
 }
 
 sync_neovim_config() {
@@ -508,10 +598,22 @@ backup_neovim_config() {
 
   if [ "$has_config" = true ]; then
     log_warn "Found existing NeoVim configuration"
-    read -p "Backup existing config? (y/n) " -n 1 -r
-    echo
 
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
+    local do_backup=0
+    if [ -t 0 ] && [ "${INTERACTIVE:-y}" = "y" ]; then
+      read -p "Backup existing config? (y/n) " -n 1 -r
+      echo
+      if [[ $REPLY =~ ^[Yy]$ ]]; then
+        do_backup=1
+      fi
+    else
+      # Non-interactive runs (CI, 'curl | bash', nohup) must not block on a
+      # prompt - and must never delete a config without a backup first.
+      log_info "Non-interactive run: backing up the existing config automatically"
+      do_backup=1
+    fi
+
+    if [ "$do_backup" -eq 1 ]; then
       mkdir -p "$backup_dir"
       log_info "Creating backup in: $backup_dir"
 
@@ -543,39 +645,60 @@ configure_shell_path() {
   local current_shell
   current_shell="$(basename "${SHELL:-bash}")"
   local shell_config=""
-  local npm_path_line='export PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$PATH"'
 
   case "$current_shell" in
   zsh)
     shell_config="${HOME}/.zshrc"
-    npm_path_line='export PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$PATH"'
     ;;
   bash)
     shell_config="${HOME}/.bashrc"
-    npm_path_line='export PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$PATH"'
     ;;
   fish)
     shell_config="${HOME}/.config/fish/config.fish"
-    npm_path_line='set -gx PATH $HOME/.npm-global/bin $HOME/.local/bin $PATH'
     ;;
   *)
     shell_config="${HOME}/.${current_shell}rc"
-    npm_path_line='export PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$PATH"'
     log_warn "Note: Detected shell '$current_shell' - using $shell_config"
     ;;
   esac
 
-  if [ -f "$shell_config" ]; then
-    if ! grep -q "npm-global" "$shell_config"; then
-      echo "$npm_path_line" >>"$shell_config"
-      log_success "✓ Added npm and local PATH to $shell_config"
-    else
-      log_success "✓ npm PATH already in $shell_config"
-    fi
-  else
-    log_warn "Note: Shell config file not found at $shell_config"
-    echo -e "Please add the following line to your shell profile manually:\n  $npm_path_line"
+  # Check both locations separately: an older install may have added
+  # ~/.npm-global/bin while ~/.local/bin (ruff, pyright, lua-language-server,
+  # hyprls, and the linked fd) is still missing from PATH.
+  local need_npm=0
+  local need_local=0
+  if ! grep -q "npm-global" "$shell_config" 2>/dev/null; then
+    need_npm=1
   fi
+  if ! grep -q "\.local/bin" "$shell_config" 2>/dev/null; then
+    need_local=1
+  fi
+
+  local path_line=""
+  if [ "$current_shell" = "fish" ]; then
+    path_line='set -gx PATH $HOME/.npm-global/bin $HOME/.local/bin $PATH'
+  elif [ "$need_npm" -eq 1 ] && [ "$need_local" -eq 1 ]; then
+    path_line='export PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$PATH"'
+  elif [ "$need_npm" -eq 1 ]; then
+    path_line='export PATH="$HOME/.npm-global/bin:$PATH"'
+  else
+    path_line='export PATH="$HOME/.local/bin:$PATH"'
+  fi
+
+  if [ ! -f "$shell_config" ]; then
+    log_warn "Note: Shell config file not found at $shell_config"
+    echo -e "Please add the following line to your shell profile manually:\n  $path_line"
+    return 0
+  fi
+
+  if [ "$need_npm" -eq 0 ] && [ "$need_local" -eq 0 ]; then
+    log_success "✓ npm and local bin paths already in $shell_config"
+    return 0
+  fi
+
+  echo "$path_line" >>"$shell_config"
+  log_success "✓ Added the missing PATH entry to $shell_config"
+  log_debug "Appended: $path_line"
 }
 
 # ================================================================================================
