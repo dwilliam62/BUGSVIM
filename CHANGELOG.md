@@ -5,7 +5,7 @@
 
 ---
 
-# 🚀 **Current Release - v1.0.5**
+# 🚀 **Current Release - v1.0.6**
 
 #### 📅 **Updated: Sept, 2026**
 
@@ -21,6 +21,16 @@
 - Added `-u` to update to nvim v12.x+
 - Added checks/install for `luacheck/luarock`
 - Added `--deps` to check for all needed pkgs and install
+- Fedora reported `shfmt` and `clang` missing after `install.sh -d`
+  - `dnf` resolves every argument before installing, so the unavailable `shfmt` name aborted the transaction and silently skipped `clang`, `clang-tools-extra`, `luarocks`, `lua-language-server`, `stylua`, `lazygit` and `python3-devel`
+  - Installs now use `--skip-unavailable` with a per-package fallback, and unavailable names are reported instead of swallowed by `|| true`
+  - Added the `vgaetera/extras` COPR as the `shfmt` source, with `go install mvdan.cc/sh/v3/cmd/shfmt@latest` as a fallback
+- Bazzite installer: same all-or-nothing failure fixed
+  - `rpm-ostree` aborts the whole layer on a single unknown name; missing names are now dropped, reported, and the rest are layered with a retry
+  - Homebrew installs pre-filter formulae so one unknown formula no longer aborts the batch
+  - Enables the relativesure/all-packages, atim/lazygit and vgaetera/extras COPRs (via `dnf copr`, or by writing a repo file on images with no copr plugin)
+  - Added `lua-language-server`, uses `tree-sitter-cli` on the rpm-ostree path, and warns that layered packages need a reboot before they are usable
+- Docs: Fedora sections of `INSTALL.md`, `INSTALL.es.md`, `PACKAGES.txt` and `INSTALL-SCRIPTS.md` (+`.es.md`) no longer list `shfmt` as a Fedora package and now enable the required COPRs
 
 #### 📅 **Updated: August, 2026**
 

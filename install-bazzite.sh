@@ -48,6 +48,168 @@ pkg_update() {
   fi
 }
 
+# ================================================================================================
+# Resilient Package Installation
+# ================================================================================================
+# brew and rpm-ostree both resolve the entire argument list before installing
+# anything, so a single unavailable name aborts the whole transaction. On Fedora
+# Atomic that silently dropped every package whenever one name was missing
+# (e.g. shfmt, which Fedora does not package).
+
+brew_install_packages() {
+  local installable=()
+  local unavailable=()
+
+  for pkg in "$@"; do
+    if brew info --formula "$pkg" >/dev/null 2>&1; then
+      installable+=("$pkg")
+    else
+      log_warn "○ $pkg (no Homebrew formula)"
+      unavailable+=("$pkg")
+    fi
+  done
+
+  if [ ${#installable[@]} -gt 0 ]; then
+    brew install "${installable[@]}" || {
+      FAILED_PACKAGES+=("${installable[@]}")
+      log_warn "⚠ Some Homebrew packages failed to install"
+    }
+  fi
+
+  if [ ${#unavailable[@]} -gt 0 ]; then
+    FAILED_PACKAGES+=("${unavailable[@]}")
+  fi
+}
+
+rpm_ostree_install_packages() {
+  local pkgs=("$@")
+  if [ ${#pkgs[@]} -eq 0 ]; then
+    return 0
+  fi
+
+  local attempts=0
+  while [ ${#pkgs[@]} -gt 0 ] && [ "$attempts" -lt 3 ]; do
+    attempts=$((attempts + 1))
+
+    local output
+    if output="$(sudo rpm-ostree install -y "${pkgs[@]}" 2>&1)"; then
+      log_success "✓ Layered: ${pkgs[*]}"
+      return 0
+    fi
+    printf '%s\n' "$output" | tail -3
+
+    # rpm-ostree has no --skip-unavailable equivalent: it reports unknown names
+    # instead of skipping them. Parse those out, report them, and retry with the
+    # remaining packages so one bad name cannot block the rest.
+    local missing
+    missing="$(printf '%s\n' "$output" |
+      sed -nE 's/^.*(Packages? not found|No match for argument)[:[:space:]]*//p' |
+      tr ',' '\n' | tr -d '[:blank:]\r' | sed 's/\.$//' | sort -u)"
+
+    local remaining=()
+    local dropped=0
+    for pkg in "${pkgs[@]}"; do
+      if [ -n "$missing" ] && printf '%s\n' "$missing" | grep -qxF -- "$pkg"; then
+        log_warn "○ $pkg (not available in the enabled repositories)"
+        FAILED_PACKAGES+=("$pkg")
+        dropped=1
+      else
+        remaining+=("$pkg")
+      fi
+    done
+
+    if [ "$dropped" -eq 0 ]; then
+      log_warn "⚠ rpm-ostree layering failed for: ${pkgs[*]}"
+      FAILED_PACKAGES+=("${pkgs[@]}")
+      return 1
+    fi
+
+    pkgs=("${remaining[@]}")
+  done
+}
+
+# Fedora Atomic images frequently ship no dnf copr plugin, but rpm-ostree reads
+# the same repo files from /etc/yum.repos.d, so write one directly if needed.
+enable_copr_repo() {
+  local owner="$1"
+  local project="$2"
+  local repo_file="/etc/yum.repos.d/_copr:copr.fedorainfracloud.org:${owner}:${project}.repo"
+
+  if [ -f "$repo_file" ]; then
+    log_success "✓ COPR ${owner}/${project} already enabled"
+    return 0
+  fi
+
+  if command -v dnf >/dev/null 2>&1 && sudo dnf copr enable -y "${owner}/${project}" >/dev/null 2>&1; then
+    log_success "✓ COPR ${owner}/${project} enabled"
+    return 0
+  fi
+
+  log_info "Enabling COPR ${owner}/${project} via repo file..."
+  if sudo tee "$repo_file" >/dev/null <<EOF
+[copr:copr.fedorainfracloud.org:${owner}:${project}]
+name=Copr repo for ${project} owned by ${owner}
+baseurl=https://download.copr.fedorainfracloud.org/results/${owner}/${project}/fedora-\$releasever-\$basearch/
+type=rpm-md
+skip_if_unavailable=True
+gpgcheck=1
+gpgkey=https://download.copr.fedorainfracloud.org/results/${owner}/${project}/pubkey.gpg
+repo_gpgcheck=0
+enabled=1
+enabled_metadata=1
+EOF
+  then
+    log_success "✓ COPR ${owner}/${project} enabled via repo file"
+  else
+    log_warn "⚠ Unable to enable COPR ${owner}/${project}"
+  fi
+}
+
+# shfmt is not packaged by Fedora (it comes from the vgaetera/extras COPR on the
+# rpm-ostree path), so keep a source build as a fallback.
+install_shfmt() {
+  if command -v shfmt >/dev/null 2>&1; then
+    log_success "✓ shfmt already installed ($(shfmt --version 2>/dev/null || echo 'installed'))"
+    return 0
+  fi
+
+  if [ "$USE_BREW" -eq 1 ]; then
+    brew_install_packages shfmt
+    if command -v shfmt >/dev/null 2>&1; then
+      log_success "✓ shfmt installed via Homebrew"
+      return 0
+    fi
+
+    if ! command -v go >/dev/null 2>&1; then
+      log_info "Installing Go toolchain (required to build shfmt)..."
+      brew_install_packages go
+    fi
+  fi
+
+  # On the rpm-ostree path nothing that was layered is usable until the next
+  # reboot, so layering a Go toolchain just to build shfmt would be wasted work.
+  if ! command -v go >/dev/null 2>&1; then
+    log_warn "⚠ Go compiler not found; skipping the shfmt source build"
+    if [ "$USE_BREW" -eq 0 ]; then
+      log_warn "  shfmt is layered from the vgaetera/extras COPR; reboot, then re-run 'bash install.sh -d' to verify."
+    fi
+    log_warn "  To build it manually: go install mvdan.cc/sh/v3/cmd/shfmt@latest"
+    FAILED_BUILD+=("shfmt")
+    return 0
+  fi
+
+  mkdir -p "$HOME/.local/bin"
+  log_info "Installing shfmt via go install..."
+  if GOBIN="$HOME/.local/bin" go install mvdan.cc/sh/v3/cmd/shfmt@latest 2>&1 | tee /tmp/shfmt-build.log; then
+    export PATH="$HOME/.local/bin:$PATH"
+    log_success "✓ shfmt installed to $HOME/.local/bin"
+  else
+    log_warn "⚠ shfmt build failed (see /tmp/shfmt-build.log)"
+    log_warn "  Install manually: go install mvdan.cc/sh/v3/cmd/shfmt@latest"
+    FAILED_BUILD+=("shfmt")
+  fi
+}
+
 ensure_neovim_supported() {
   log_info "Checking NeoVim version..."
   if ! command -v nvim &>/dev/null; then
@@ -80,18 +242,30 @@ check_and_install_deps() {
 
   log_info "Installing core and development dependencies via $(pkg_label)..."
   if [ "$USE_BREW" -eq 1 ]; then
-    pkg_install \
+    brew_install_packages \
       git ripgrep fd curl jq pkg-config tree-sitter \
       gcc make automake autoconf \
       lua luarocks python node llvm rust \
-      shfmt clang-format lazygit bat || true
+      shfmt clang-format lazygit bat
   else
-    pkg_install \
-      git ripgrep fd curl jq pkg-config tree-sitter \
+    log_info "Enabling COPR repositories..."
+    enable_copr_repo relativesure all-packages
+    enable_copr_repo atim lazygit
+    enable_copr_repo vgaetera extras
+
+    # tree-sitter-cli is the Fedora package name; shfmt comes from vgaetera/extras
+    # and lua-language-server from relativesure/all-packages.
+    rpm_ostree_install_packages \
+      git ripgrep fd curl jq pkg-config tree-sitter-cli \
       gcc gcc-c++ make automake autoconf \
-      lua luarocks python3-devel python3-pip nodejs npm clang clang-tools-extra rust \
-      shfmt lazygit bat wl-clipboard || true
+      lua luarocks lua-language-server python3-devel python3-pip nodejs npm \
+      clang clang-tools-extra rust shfmt lazygit bat wl-clipboard || true
+
+    log_warn "⚠ rpm-ostree layers only become available after a reboot, so packages layered just now may still show as missing below."
+    log_warn "  Reboot, then re-run 'bash install.sh -d' to verify."
   fi
+
+  install_shfmt
 
   # Luacheck
   if command -v luacheck &>/dev/null; then
