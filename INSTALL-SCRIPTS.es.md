@@ -213,6 +213,9 @@ Cada script ejecuta los siguientes pasos en orden:
 - Utiliza el gestor de paquetes `dnf`.
 - Incluye el grupo `@development-tools`.
 - Inicializa la cadena de herramientas de Rust automáticamente.
+- Habilita los COPR relativesure/all-packages, atim/lazygit, yorickpeterse/stylua y vgaetera/extras (Fedora no empaqueta lua-language-server, lazygit, stylua ni shfmt).
+- Instala `shfmt` desde el COPR vgaetera/extras, con compilación desde el código fuente con Go en `~/.local/bin` como respaldo si ese COPR no tiene compilación para la versión.
+- Instala los paquetes con `--skip-unavailable`, de forma que un nombre no disponible ya no cancela toda la transacción de `dnf`.
 
 ---
 

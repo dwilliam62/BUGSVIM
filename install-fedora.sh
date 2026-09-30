@@ -19,6 +19,56 @@ else
   exit 1
 fi
 
+# ================================================================================================
+# Fedora / dnf Helpers
+# ================================================================================================
+
+# Install dnf packages without letting a single unavailable name abort the
+# whole transaction. dnf resolves all arguments before installing anything, so
+# one package that does not exist (e.g. shfmt on Fedora) silently prevents every
+# other package in the list from being installed.
+dnf_install_packages() {
+  local pkgs=("$@")
+  if [ ${#pkgs[@]} -eq 0 ]; then
+    return 0
+  fi
+
+  local dnf_bin="dnf"
+  if command -v dnf5 >/dev/null 2>&1; then
+    dnf_bin="dnf5"
+  fi
+
+  local dnf_args=(-y)
+  if [ "$dnf_bin" = "dnf5" ]; then
+    dnf_args+=(--skip-unavailable)
+  else
+    dnf_args+=(--skip-broken --setopt=strict=0)
+  fi
+
+  log_info "Installing Fedora packages via ${dnf_bin}..."
+  if sudo "$dnf_bin" install "${dnf_args[@]}" "${pkgs[@]}"; then
+    return 0
+  fi
+
+  # Resolution can still fail as a whole (older dnf, conflicting arguments).
+  # Retry one package at a time so a single bad name cannot block the rest.
+  log_warn "⚠ Bulk install failed; retrying packages individually..."
+  local failed=()
+  for pkg in "${pkgs[@]}"; do
+    if sudo "$dnf_bin" install "${dnf_args[@]}" "$pkg" >/dev/null 2>&1; then
+      log_success "✓ $pkg"
+    else
+      log_warn "○ $pkg (unavailable)"
+      failed+=("$pkg")
+    fi
+  done
+
+  if [ ${#failed[@]} -gt 0 ]; then
+    FAILED_PACKAGES+=("${failed[@]}")
+    return 1
+  fi
+}
+
 ensure_neovim_supported() {
   log_info "Checking NeoVim version..."
   if ! command -v nvim &>/dev/null; then
@@ -79,6 +129,39 @@ build_hyprls() {
   fi
 }
 
+# Fallback for `shfmt`: the vgaetera/extras COPR is the primary source, but COPR
+# builds can lag new Fedora releases, so build it from source with the Go
+# toolchain into ~/.local/bin (the same drop-in location used for hyprls).
+install_shfmt() {
+  if command -v shfmt >/dev/null 2>&1; then
+    log_success "✓ shfmt already installed ($(shfmt --version 2>/dev/null || echo 'installed'))"
+    return 0
+  fi
+
+  if ! command -v go >/dev/null 2>&1; then
+    log_info "Installing Go toolchain (required to build shfmt)..."
+    dnf_install_packages golang || true
+  fi
+
+  if ! command -v go >/dev/null 2>&1; then
+    log_warn "⚠ Go compiler not found; skipping shfmt build"
+    log_warn "  Install manually: sudo dnf install -y golang && go install mvdan.cc/sh/v3/cmd/shfmt@latest"
+    FAILED_BUILD+=("shfmt")
+    return 0
+  fi
+
+  mkdir -p "$HOME/.local/bin"
+  log_info "Installing shfmt via go install..."
+  if GOBIN="$HOME/.local/bin" go install mvdan.cc/sh/v3/cmd/shfmt@latest 2>&1 | tee /tmp/shfmt-build.log; then
+    export PATH="$HOME/.local/bin:$PATH"
+    log_success "✓ shfmt installed to $HOME/.local/bin"
+  else
+    log_warn "⚠ shfmt build failed (see /tmp/shfmt-build.log)"
+    log_warn "  Install manually: go install mvdan.cc/sh/v3/cmd/shfmt@latest"
+    FAILED_BUILD+=("shfmt")
+  fi
+}
+
 check_and_install_deps() {
   echo -e "${BLUE}╔════════════════════════════════════════════════════════════════╗${NC}"
   echo -e "${BLUE}║   bugsvim - Checking and Installing Dependencies (Fedora)      ║${NC}"
@@ -89,32 +172,39 @@ check_and_install_deps() {
   sudo dnf copr enable -y relativesure/all-packages 2>/dev/null || true
   sudo dnf copr enable -y atim/lazygit 2>/dev/null || true
   sudo dnf copr enable -y yorickpeterse/stylua 2>/dev/null || true
+  sudo dnf copr enable -y vgaetera/extras 2>/dev/null || true
 
-  log_info "Installing Fedora packages via dnf..."
-  sudo dnf install -y \
-    git \
-    ripgrep \
-    fd \
-    curl \
-    jq \
-    @development-tools \
-    pkg-config \
-    tree-sitter-cli \
-    lua \
-    luarocks \
-    python3-devel \
-    python3-pip \
-    nodejs \
-    npm \
-    clang \
-    clang-tools-extra \
-    rust \
-    lua-language-server \
-    shfmt \
-    stylua \
-    lazygit \
-    bat \
-    wl-clipboard || true
+  local dnf_pkgs=(
+    git
+    ripgrep
+    fd
+    curl
+    jq
+    "@development-tools"
+    pkg-config
+    tree-sitter-cli
+    lua
+    luarocks
+    python3-devel
+    python3-pip
+    nodejs
+    npm
+    clang
+    clang-tools-extra
+    rust
+    lua-language-server
+    stylua
+    shfmt
+    lazygit
+    bat
+    wl-clipboard
+  )
+
+  # shfmt comes from the vgaetera/extras COPR enabled above. If that COPR has no
+  # build for this release, the name is skipped instead of aborting the whole
+  # transaction, and install_shfmt builds it from source below.
+  dnf_install_packages "${dnf_pkgs[@]}" || true
+
   sudo dnf install -y luacheck 2>/dev/null || sudo dnf install -y lua-check 2>/dev/null || true
 
   # Luacheck fallback via luarocks
@@ -141,6 +231,8 @@ check_and_install_deps() {
     @fsouza/prettierd \
     vscode-langservers-extracted \
     neovim
+
+  install_shfmt
 
   build_hyprls
 

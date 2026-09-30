@@ -37,12 +37,22 @@ FEDORA
 
 FULL INSTALLATION (All LSPs + Formatters):
 
+# Fedora packages neither stylua, lazygit, lua-language-server, nor shfmt:
+# enable the same COPRs the installer uses.
+sudo dnf copr enable -y relativesure/all-packages
+sudo dnf copr enable -y atim/lazygit
+sudo dnf copr enable -y yorickpeterse/stylua
+sudo dnf copr enable -y vgaetera/extras
+
+# NOTE: dnf aborts the entire transaction when any single name is unavailable.
+# If vgaetera/extras has no shfmt build for your release, install it with:
+#   go install mvdan.cc/sh/v3/cmd/shfmt@latest
 sudo dnf update -y && sudo dnf install -y \
   neovim git ripgrep fd curl @development-tools pkg-config \
-  lua luarocks luacheck lua-language-server python3-devel python3-pip nodejs npm clang \
-  clang-tools-extra bash-language-server rust nil stylua shfmt prettier \
-  lazygit bat wl-clipboard && \
-npm install -g @fsouza/prettierd vscode-langservers-extracted && \
+  lua luarocks lua-language-server python3-devel python3-pip nodejs npm clang \
+  clang-tools-extra rust golang stylua shfmt lazygit bat wl-clipboard && \
+sudo luarocks install luacheck && \
+npm install -g bash-language-server @fsouza/prettierd vscode-langservers-extracted && \
 pip3 install --user ruff pyright
 
 ---

@@ -312,6 +312,9 @@ Each script performs the following steps in order:
 - Uses python3-devel for Python development
 - Uses @development-tools meta-package for build tools
 - Automatic Rust initialization
+- Enables the relativesure/all-packages, atim/lazygit, yorickpeterse/stylua, and vgaetera/extras COPRs (Fedora does not package lua-language-server, lazygit, stylua, or shfmt)
+- Installs `shfmt` from the vgaetera/extras COPR, falling back to a Go source build into `~/.local/bin` when that COPR has no build for the release
+- Installs packages with `--skip-unavailable`, so a name Fedora cannot resolve no longer aborts the whole `dnf` transaction
 
 **Installation Time:** ~8-15 minutes (depending on hyprls build)
 

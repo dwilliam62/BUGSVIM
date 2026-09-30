@@ -83,12 +83,21 @@ npm install -g @fsouza/prettierd vscode-langservers-extracted
 ### Fedora
 
 #### En una sola línea (Base + Formateadores)
+
+Fedora no empaqueta `stylua`, `lazygit`, `lua-language-server` ni `shfmt`: habilita los COPR que usa el instalador (`shfmt` proviene de `vgaetera/extras`; si ese COPR no tiene compilación para tu versión, usa `go install mvdan.cc/sh/v3/cmd/shfmt@latest`).
+
 ```bash
+sudo dnf copr enable -y relativesure/all-packages
+sudo dnf copr enable -y atim/lazygit
+sudo dnf copr enable -y yorickpeterse/stylua
+sudo dnf copr enable -y vgaetera/extras
+
 sudo dnf update -y && sudo dnf install -y \
   neovim git tree-sitter-cli ripgrep fd curl @development-tools pkg-config \
-  lua lua-language-server python3-devel python3-pip nodejs npm clang \
-  clang-tools-extra bash-language-server rust nil stylua shfmt prettier && \
-npm install -g @fsouza/prettierd vscode-langservers-extracted && \
+  lua luarocks lua-language-server python3-devel python3-pip nodejs npm clang \
+  clang-tools-extra rust golang stylua shfmt lazygit bat wl-clipboard && \
+sudo luarocks install luacheck && \
+npm install -g bash-language-server @fsouza/prettierd vscode-langservers-extracted && \
 pip3 install --user ruff pyright
 ```
 

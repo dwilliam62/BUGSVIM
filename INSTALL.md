@@ -208,12 +208,21 @@ nvim --headless -c 'checkhealth' -c 'qa'
 ### Fedora
 
 ### One-liner (Core + Formatters)
+
+Fedora packages neither `stylua`, `lazygit`, `lua-language-server`, nor `shfmt`, so enable the COPRs used by the installer (`shfmt` comes from `vgaetera/extras`; if that COPR has no build for your release, fall back to `go install mvdan.cc/sh/v3/cmd/shfmt@latest`).
+
 ```bash
+sudo dnf copr enable -y relativesure/all-packages
+sudo dnf copr enable -y atim/lazygit
+sudo dnf copr enable -y yorickpeterse/stylua
+sudo dnf copr enable -y vgaetera/extras
+
 sudo dnf update -y && sudo dnf install -y \
   neovim git ripgrep fd curl @development-tools pkg-config \
-  lua luarocks luacheck lua-language-server python3-devel python3-pip nodejs npm clang \
-  clang-tools-extra bash-language-server rust nil stylua shfmt prettier && \
-npm install -g @fsouza/prettierd vscode-langservers-extracted && \
+  lua luarocks lua-language-server python3-devel python3-pip nodejs npm clang \
+  clang-tools-extra rust golang stylua shfmt lazygit bat wl-clipboard && \
+sudo luarocks install luacheck && \
+npm install -g bash-language-server @fsouza/prettierd vscode-langservers-extracted && \
 pip3 install --user ruff pyright
 ```
 
@@ -224,24 +233,32 @@ set -euo pipefail
 
 echo "=== bugsvim Fedora Setup ==="
 
-# System packages
+# COPRs: Fedora does not package stylua, lazygit, lua-language-server, or shfmt
+sudo dnf copr enable -y relativesure/all-packages
+sudo dnf copr enable -y atim/lazygit
+sudo dnf copr enable -y yorickpeterse/stylua
+sudo dnf copr enable -y vgaetera/extras
+
+# System packages (an unavailable name makes dnf abandon the entire
+# transaction, so --skip-unavailable is used in the installer)
 sudo dnf update -y
 sudo dnf install -y \
   neovim git ripgrep fd curl @development-tools pkg-config \
-  lua lua-language-server python3-devel python3-pip nodejs npm clang \
-  clang-tools-extra bash-language-server rust nil stylua shfmt prettier
+  lua luarocks lua-language-server python3-devel python3-pip nodejs npm clang \
+  clang-tools-extra rust golang stylua shfmt lazygit bat wl-clipboard
+
+# shfmt (Bash formatter) built from source into ~/.local/bin if the
+# vgaetera/extras COPR has no build for this release
+command -v shfmt >/dev/null || go install mvdan.cc/sh/v3/cmd/shfmt@latest
+
+# Lua linter
+sudo luarocks install luacheck || true
 
 # Global npm packages
-npm install -g @fsouza/prettierd vscode-langservers-extracted
+npm install -g bash-language-server @fsouza/prettierd vscode-langservers-extracted
 
 # Python packages
 pip3 install --user ruff pyright
-
-# Initialize Rust
-rustup default stable || true
-
-# Optional: convenience tools
-sudo dnf install -y lazygit bat wl-clipboard || true
 
 echo "✓ Setup complete!"
 echo "Note: hyprls requires manual build from https://github.com/hyprwm/hyprland"
