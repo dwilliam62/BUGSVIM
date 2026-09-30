@@ -50,9 +50,14 @@
   - Package-install failures now log the package manager's own error line instead of a generic "unavailable"
 - Debian/Ubuntu validated with a full install on a real trixie VM
   - `fd-find` installs `fdfind` (or `fd-find`), while the binary actually named `fd` sits outside PATH in `/usr/lib/cargo/bin`, so `fd` was never resolvable; the installer now locates any of those (including via `dpkg -L`), installs `fd-find` if needed, and links `~/.local/bin/fd`
+  - the same helper links Debian's renamed `bat` binary (`batcat`) as `~/.local/bin/bat`
   - `configure_shell_path` only looked for `~/.npm-global/bin`, so a shell rc that already had that line never received `~/.local/bin` - leaving ruff, pyright, lua-language-server, hyprls and the fd link installed but unreachable. Both locations are now checked separately and the missing entry is added
   - `backup_neovim_config` no longer aborts non-interactive installs: the prompt is skipped when stdin is not a tty and the existing config is backed up automatically instead of dying on EOF under `set -e`
   - tree-sitter CLI is now version-checked: Debian trixie packages 0.22.6 while nvim-treesitter requires >= 0.26.1 to compile parsers. A newer prebuilt Linux CLI is downloaded into `~/.local/bin` (cargo build stays as the fallback), and `:TSInstall` now compiles parsers successfully
+- Remaining `:checkhealth` errors resolved
+  - `snacks.lua` now asserts `vim.ui.input`/`vim.ui.select` immediately after setup: snacks left Neovim's defaults in place, which `Snacks.health` reported as errors
+  - New `install_doc_toolchain` step in every installer (skip with `INSTALL_DOC_TOOLS=n`): installs `@mermaid-js/mermaid-cli` (mmdc) via npm and unpacks the static `tectonic` release into `~/.local/bin`, clearing the Mermaid/LaTeX preview errors
+  - `POST-INSTALL.md` now documents the `~/.local/bin` PATH requirement (not just `~/.npm-global/bin`), the optional preview tooling, the tree-sitter CLI version requirement, and which `:checkhealth` messages are expected in a headless session (dashboard, kitty graphics, unset `TERM`)
 
 #### 📅 **Updated: August, 2026**
 

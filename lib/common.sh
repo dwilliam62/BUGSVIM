@@ -552,6 +552,84 @@ update_treesitter_cli() {
   return 0
 }
 
+# ================================================================================================
+# Optional markdown / preview toolchain
+# ================================================================================================
+# Snacks.image (and other previewers) shell out to `mmdc` for Mermaid diagrams
+# and `tectonic`/`pdflatex` for LaTeX math, and report them as errors in
+# :checkhealth when they are missing. Neither is packaged by Debian/Ubuntu.
+install_tectonic_prebuilt() {
+  [ "$(uname -s)" = "Linux" ] || return 1
+
+  local target
+  case "$(uname -m)" in
+  x86_64 | amd64) target="x86_64-unknown-linux-musl" ;;
+  aarch64 | arm64) target="aarch64-unknown-linux-musl" ;;
+  armv7l | armv6l | arm) target="arm-unknown-linux-musleabihf" ;;
+  i?86) target="i686-unknown-linux-gnu" ;;
+  *) return 1 ;;
+  esac
+
+  local tag version encoded_tag
+  tag="$(curl -fsSL --max-time 30 https://api.github.com/repos/tectonic-typesetting/tectonic/releases/latest 2>/dev/null |
+    sed -n 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)"
+  if [ -z "$tag" ]; then
+    return 1
+  fi
+  version="${tag##*@}" # tags look like 'tectonic@0.17.0'
+  encoded_tag="${tag/@/%40}"
+
+  local tmp
+  tmp="$(mktemp -d)"
+  local url="https://github.com/tectonic-typesetting/tectonic/releases/download/${encoded_tag}/tectonic-${version}-${target}.tar.gz"
+  log_info "Downloading tectonic ${version} (${target})..."
+
+  if curl -fsSL --max-time 600 -o "${tmp}/tectonic.tar.gz" "$url" &&
+    tar -xzf "${tmp}/tectonic.tar.gz" -C "$tmp" && [ -f "${tmp}/tectonic" ]; then
+    mkdir -p "${HOME}/.local/bin"
+    cp "${tmp}/tectonic" "${HOME}/.local/bin/tectonic"
+    chmod +x "${HOME}/.local/bin/tectonic"
+    export PATH="${HOME}/.local/bin:$PATH"
+    rm -rf "$tmp"
+    log_success "✓ tectonic ${version} installed to ~/.local/bin"
+    return 0
+  fi
+
+  rm -rf "$tmp"
+  return 1
+}
+
+install_doc_toolchain() {
+  if [ "${INSTALL_DOC_TOOLS:-y}" != "y" ]; then
+    log_info "Skipping optional markdown/preview tools (INSTALL_DOC_TOOLS=${INSTALL_DOC_TOOLS:-})"
+    return 0
+  fi
+
+  # Mermaid diagrams (used by Snacks.image for docs previews). The npm package
+  # bundles its own browser, so expect a few hundred MB on first install.
+  if ! command -v mmdc >/dev/null 2>&1; then
+    log_info "Installing mermaid-cli (mmdc) via npm - this pulls a bundled browser..."
+    if ! install_npm_packages "@mermaid-js/mermaid-cli"; then
+      FAILED_NPM+=("@mermaid-js/mermaid-cli")
+    fi
+  else
+    log_success "✓ mmdc already available"
+  fi
+
+  # LaTeX math: tectonic ships static binaries, and a TeX distribution provides
+  # pdflatex, so only fetch tectonic when neither is present.
+  if command -v tectonic >/dev/null 2>&1; then
+    log_success "✓ tectonic already available"
+  elif command -v pdflatex >/dev/null 2>&1; then
+    log_success "✓ pdflatex already available"
+  else
+    if ! install_tectonic_prebuilt; then
+      log_warn "○ Neither 'tectonic' nor 'pdflatex' is available; LaTeX math in docs previews will not render"
+      FAILED_BUILD+=("tectonic")
+    fi
+  fi
+}
+
 sync_neovim_config() {
   log_info "Syncing bugsvim config to ~/.config/nvim..."
   local repo_root="${REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"

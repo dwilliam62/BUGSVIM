@@ -4,7 +4,7 @@ After running the installation script, follow these steps to ensure everything w
 
 ## npm PATH Configuration
 
-The installation scripts configure npm to use `~/.npm-global` for user-level global packages to avoid permission issues.
+The installation scripts configure npm to use `~/.npm-global` for user-level global packages to avoid permission issues, and install user-level binaries into `~/.local/bin`. **Both** directories need to be in your PATH - `~/.local/bin` is where `ruff`, `pyright`, `lua-language-server`, `hyprls`, the `fd` link (Debian/Ubuntu) and `tectonic` live.
 
 ### Verify npm Configuration
 
@@ -19,17 +19,17 @@ The npm packages installed in `~/.npm-global/bin` need to be in your PATH. Add t
 
 #### For Bash (`~/.bashrc`)
 ```bash
-export PATH=~/.npm-global/bin:$PATH
+export PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$PATH"
 ```
 
 #### For Zsh (`~/.zshrc`)
 ```bash
-export PATH=~/.npm-global/bin:$PATH
+export PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$PATH"
 ```
 
 #### For Fish (`~/.config/fish/config.fish`)
 ```fish
-set -gx PATH ~/.npm-global/bin $PATH
+set -gx PATH $HOME/.npm-global/bin $HOME/.local/bin $PATH
 ```
 
 ### Apply Changes
@@ -99,9 +99,10 @@ If verification shows some packages missing:
 
 **Debian/Ubuntu:**
 ```bash
-npm install -g lua-language-server bash-language-server
-npm install -g @johnnymorganz/stylua-bin prettier @fsouza/prettierd
-pip3 install --user pyright ruff
+# lua-language-server is not packaged for Debian/Ubuntu and has no npm package;
+# the installer unpacks the upstream release into ~/.local
+npm install -g bash-language-server @johnnymorganz/stylua-bin prettier @fsouza/prettierd
+python3 -m pip install --user --break-system-packages pyright ruff
 ```
 
 **Arch Linux:**
@@ -139,6 +140,23 @@ Inside NeoVim, check that LSP servers are connected:
 :checkhealth
 ```
 
+### Expected `:checkhealth` results
+
+Run it from a real terminal (not `--headless`, and with `TERM` set). The dependency
+checks should all report OK. The following messages are expected and are not
+installation problems:
+
+- `Snacks.dashboard: setup did not run` - snacks skips the dashboard when there is
+  no UI attached (headless, `nvim --headless`).
+- `your terminal does not support the kitty graphics protocol` - only kitty,
+  wezterm and ghostty support it; any other terminal reports this.
+- `Terminal: command failed: { "infocmp", "-L" }` - `TERM` is unset (typical for
+  headless runs); `infocmp` itself is installed.
+- Warnings about missing treesitter languages - parsers are installed on demand,
+  so they clear as files are opened.
+- `markdown`/`latex`/`mermaid` rendering warnings - install `mmdc` and
+  `tectonic`/`pdflatex` as shown above.
+
 ## Optional: Install Additional Packages
 
 ### Hyprland LSP (hyprls)
@@ -164,9 +182,10 @@ Similar to Debian, build from source.
 
 ### Nix LSP (nil)
 
-**Arch (AUR):**
+`nil` is not in the Arch repositories or the AUR, so build it from source:
+
 ```bash
-yay -S nil
+git clone https://github.com/oxalica/nil /tmp/nil && cd /tmp/nil && cargo build --release
 ```
 
 **Debian/Ubuntu/Fedora:**
@@ -174,6 +193,27 @@ Install via Nix:
 ```bash
 nix run github:oxalica/nil
 ```
+
+### Markdown preview tooling (mmdc, tectonic)
+
+The installer adds the tools used by the in-editor markdown previews:
+
+```bash
+# Mermaid diagrams (installs a bundled browser, expect a few hundred MB)
+npm install -g @mermaid-js/mermaid-cli
+
+# LaTeX math - either a TeX distribution (pdflatex) or the static tectonic binary
+# (the installer downloads it into ~/.local/bin)
+```
+
+Skip these with `INSTALL_DOC_TOOLS=n bash install.sh -d`.
+
+### tree-sitter CLI version
+
+`nvim-treesitter` (main branch) needs `tree-sitter-cli` >= 0.26.1 to compile parsers,
+but several distributions package something older (Debian trixie ships 0.22.6). The
+installer detects that and installs a newer build into `~/.local/bin` - downloading
+the upstream release binary on Linux, or building it with cargo elsewhere.
 
 ## Frequently Asked Questions
 

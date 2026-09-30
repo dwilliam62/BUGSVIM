@@ -211,6 +211,8 @@ check_and_install_deps() {
 
   update_treesitter_cli
 
+  install_doc_toolchain
+
   echo ""
   log_info "Verifying dependencies..."
   echo ""

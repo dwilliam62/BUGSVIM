@@ -81,10 +81,33 @@ build_hyprls() {
   fi
 }
 
-# Debian/Ubuntu package fd as 'fd-find', and depending on the release the
-# binary is called 'fdfind' or 'fd-find' - the one named 'fd' ships outside PATH
-# in /usr/lib/cargo/bin. Link whichever exists to 'fd' in ~/.local/bin so the
-# config and the verification step can find it.
+# Debian/Ubuntu rename a couple of the tools this config uses:
+#   fd  -> fdfind (or fd-find), with the real 'fd' binary outside PATH in
+#          /usr/lib/cargo/bin
+#   bat -> batcat (to avoid a name clash with another package)
+# Link whichever variant exists into ~/.local/bin under the expected name.
+link_debian_binary() {
+  local wanted="$1"
+  shift
+
+  if command -v "$wanted" &>/dev/null; then
+    log_success "✓ $wanted already available ($(command -v "$wanted"))"
+    return 0
+  fi
+
+  local candidate
+  for candidate in "$@"; do
+    if [ -n "$candidate" ] && [ -x "$candidate" ]; then
+      mkdir -p "$HOME/.local/bin"
+      ln -sf "$candidate" "$HOME/.local/bin/$wanted"
+      export PATH="${HOME}/.local/bin:$PATH"
+      log_success "✓ $wanted linked: ~/.local/bin/$wanted -> $candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+
 find_fd_binary() {
   local candidate
   for candidate in \
@@ -141,6 +164,15 @@ link_fd_binary() {
   log_success "✓ fd available as ~/.local/bin/fd -> ${fd_bin}"
 }
 
+link_bat_binary() {
+  link_debian_binary bat \
+    "$(command -v batcat 2>/dev/null || true)" \
+    /usr/bin/batcat \
+    /usr/local/bin/batcat \
+    "$(command -v bat 2>/dev/null || true)" ||
+    log_warn "⚠ Unable to locate the bat binary; install 'bat' manually and link it to 'bat'"
+}
+
 check_and_install_deps() {
   echo -e "${BLUE}╔════════════════════════════════════════════════════════════════╗${NC}"
   echo -e "${BLUE}║   bugsvim - Checking and Installing Dependencies (Debian/Ubuntu)║${NC}"
@@ -191,6 +223,7 @@ check_and_install_deps() {
   install_lua_language_server_from_release || true
 
   link_fd_binary
+  link_bat_binary
 
   # Luacheck fallback via luarocks
   if ! command -v luacheck &>/dev/null && command -v luarocks &>/dev/null; then
@@ -219,6 +252,8 @@ check_and_install_deps() {
   build_hyprls
 
   update_treesitter_cli
+
+  install_doc_toolchain
 
   echo ""
   log_info "Verifying dependencies..."
