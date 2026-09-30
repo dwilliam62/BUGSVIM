@@ -57,12 +57,15 @@ These scripts will:
 ### Debian/Ubuntu
 
 ### One-liner (Core + Formatters)
+
+Debian/Ubuntu package neither `lua-language-server`, `bash-language-server`, `nil`, `alejandra`, `prettier` nor `stylua`, and `apt-get` aborts the whole install when one name is unavailable. Get those from npm/upstream instead — `install-debian.sh` does this automatically (including `lua-language-server` from its upstream release).
+
 ```bash
 sudo apt-get update && sudo apt-get install -y \
   neovim git ripgrep fd-find curl build-essential pkg-config \
-  lua-language-server lua-check luarocks python3-pip nodejs npm clang clang-tools \
-  bash-language-server rustup nil stylua shfmt clang-format prettier && \
-npm install -g @fsouza/prettierd vscode-langservers-extracted && \
+  lua-check luarocks python3-pip nodejs npm clang clang-tools \
+  rustup shfmt clang-format && \
+npm install -g bash-language-server @fsouza/prettierd vscode-langservers-extracted && \
 pip3 install --user ruff pyright
 ```
 
@@ -73,21 +76,26 @@ set -euo pipefail
 
 echo "=== bugsvim Debian Setup ==="
 
-# System packages
+# System packages (apt-get aborts everything when a name is unavailable, and
+# Debian/Ubuntu package neither lua-language-server, bash-language-server, nil,
+# alejandra, prettier nor stylua)
 sudo apt-get update
 sudo apt-get install -y \
   neovim git ripgrep fd-find curl build-essential pkg-config \
-  lua-language-server python3-pip nodejs npm clang clang-tools \
-  bash-language-server rustup nil stylua shfmt clang-format prettier
+  lua-check luarocks python3-pip nodejs npm clang clang-tools \
+  rustup shfmt clang-format
 
-# Global npm packages
-npm install -g @fsouza/prettierd vscode-langservers-extracted
+# Global npm packages (bash-language-server, prettier daemon, web LSPs)
+npm install -g bash-language-server @fsouza/prettierd vscode-langservers-extracted
 
 # Python packages
 pip3 install --user ruff pyright
 
-# Optional: convenience tools
-sudo apt-get install -y lazygit bat wl-clipboard || true
+# Optional: convenience tools (lazygit is not in the Ubuntu 24.04 repos)
+sudo apt-get install -y bat wl-clipboard || true
+
+# lua-language-server is not packaged: use the upstream release
+# https://github.com/LuaLS/lua-language-server/releases
 
 echo "✓ Setup complete!"
 echo "Note: hyprls requires manual build from https://github.com/hyprwm/hyprland"
@@ -100,7 +108,7 @@ echo "Note: hyprls requires manual build from https://github.com/hyprwm/hyprland
 sudo pacman -S --noconfirm \
   neovim git ripgrep fd curl base-devel pkg-config \
   lua-language-server luacheck luarocks python nodejs npm clang \
-  bash-language-server rustup nil stylua shfmt clang prettier && \
+  bash-language-server rustup stylua shfmt clang prettier && \
 npm install -g @fsouza/prettierd vscode-langservers-extracted
 ```
 
@@ -111,11 +119,11 @@ set -euo pipefail
 
 echo "=== bugsvim Arch Setup ==="
 
-# Core system packages
+# Core system packages (nil is not packaged for Arch; build it from https://github.com/oxalica/nil)
 sudo pacman -S --noconfirm \
   neovim git ripgrep fd curl base-devel pkg-config \
   lua-language-server python nodejs npm clang \
-  bash-language-server rustup nil stylua shfmt clang prettier
+  bash-language-server rustup stylua shfmt clang prettier
 
 # Global npm packages
 npm install -g @fsouza/prettierd vscode-langservers-extracted

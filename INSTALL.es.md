@@ -56,12 +56,15 @@ Estos scripts se encargarán de:
 ### Debian / Ubuntu
 
 #### En una sola línea (Base + Formateadores)
+
+Debian/Ubuntu no empaqueta `lua-language-server`, `bash-language-server`, `nil`, `alejandra`, `prettier` ni `stylua`, y `apt-get` cancela toda la instalación cuando un nombre no existe. Instálalos desde npm/upstream — `install-debian.sh` lo hace automáticamente (incluido `lua-language-server` desde su release oficial).
+
 ```bash
 sudo apt-get update && sudo apt-get install -y \
   neovim git tree-sitter-cli ripgrep fd-find curl build-essential pkg-config \
-  lua-language-server python3-pip nodejs npm clang clang-tools \
-  bash-language-server rustup nil stylua shfmt clang-format prettier && \
-npm install -g @fsouza/prettierd vscode-langservers-extracted && \
+  lua-check luarocks python3-pip nodejs npm clang clang-tools \
+  rustup shfmt clang-format && \
+npm install -g bash-language-server @fsouza/prettierd vscode-langservers-extracted && \
 pip3 install --user ruff pyright
 ```
 
@@ -74,7 +77,7 @@ pip3 install --user ruff pyright
 sudo pacman -S --noconfirm \
   neovim git tree-sitter-cli ripgrep fd curl base-devel pkg-config \
   lua-language-server python nodejs npm clang \
-  bash-language-server rustup nil stylua shfmt clang prettier && \
+  bash-language-server rustup stylua shfmt clang prettier && \
 npm install -g @fsouza/prettierd vscode-langservers-extracted
 ```
 

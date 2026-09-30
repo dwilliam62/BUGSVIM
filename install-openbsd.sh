@@ -19,6 +19,21 @@ else
   exit 1
 fi
 
+# OpenBSD ships version-suffixed luarocks binaries (luarocks-5.4), while the
+# rest of the tooling expects a plain 'luarocks' on PATH.
+setup_openbsd_symlinks() {
+  if ! command -v luarocks &>/dev/null; then
+    local lr_bin
+    lr_bin="$(ls /usr/local/bin/luarocks-[0-9]* 2>/dev/null | sort -V | tail -n 1 || true)"
+    if [ -n "$lr_bin" ] && [ -x "$lr_bin" ]; then
+      log_info "Creating symlink for luarocks -> $lr_bin..."
+      mkdir -p "$HOME/.local/bin"
+      run_as_root ln -sf "$lr_bin" /usr/local/bin/luarocks || ln -sf "$lr_bin" "$HOME/.local/bin/luarocks" || true
+      export PATH="${HOME}/.local/bin:$PATH"
+    fi
+  fi
+}
+
 ensure_neovim_supported() {
   log_info "Checking NeoVim version..."
   if ! command -v nvim &>/dev/null; then
@@ -52,30 +67,39 @@ check_and_install_deps() {
   log_info "Updating OpenBSD packages..."
   run_as_root pkg_add -u || true
 
+  # NOTE: OpenBSD packages no pkgconf, npm (the node package provides npm) or
+  # lazygit; the Lua rocks build is the luarocks-lua54 subpackage, and clangd /
+  # clang-format live in clang-tools-extra rather than llvm.
+  local openbsd_pkgs=(
+    git
+    ripgrep
+    fd
+    curl
+    jq
+    gmake
+    tree-sitter
+    lua
+    luarocks-lua54
+    lua-language-server
+    python%3
+    py3-pip
+    node
+    llvm
+    clang-tools-extra
+    bash
+    shfmt
+    stylua
+    bat
+    xclip
+  )
+
+  # pkg_add reports the packages it could not find instead of failing the whole
+  # run, but keep the same retry/report behaviour for consistency.
   log_info "Installing OpenBSD packages via pkg_add..."
-  run_as_root pkg_add \
-    git \
-    ripgrep \
-    fd \
-    curl \
-    jq \
-    gmake \
-    pkgconf \
-    tree-sitter \
-    lua \
-    luarocks--lua51 \
-    python%3 \
-    py3-pip \
-    node \
-    npm \
-    llvm \
-    bash \
-    shfmt \
-    stylua \
-    lazygit \
-    bat \
-    xclip || true
-  run_as_root pkg_add luacheck 2>/dev/null || true
+  install_packages_resilient "run_as_root pkg_add" "${openbsd_pkgs[@]}" || true
+  install_packages_resilient "run_as_root pkg_add" luacheck || true
+
+  setup_openbsd_symlinks
 
   # Luacheck fallback via luarocks
   if ! command -v luacheck &>/dev/null && command -v luarocks &>/dev/null; then
@@ -87,6 +111,31 @@ check_and_install_deps() {
   if ! command -v rustc &>/dev/null; then
     log_info "Installing Rust toolchain via rustup..."
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y || true
+  fi
+
+  # Python packages. OpenBSD marks its Python as externally managed, and ruff has
+  # no BSD package or wheel, so pip compiles it from source (slow, and it can
+  # fail on small VMs). Install them separately so a ruff build failure cannot
+  # block pyright, which is pure Python.
+  if ! command -v pyright &>/dev/null && ! command -v pyright-langserver &>/dev/null; then
+    log_info "Installing pyright via pip..."
+    if python3 -m pip install --user --break-system-packages pyright 2>/dev/null ||
+      pip3 install --user --break-system-packages pyright 2>/dev/null; then
+      log_success "✓ pyright installed"
+    else
+      FAILED_PYTHON+=("pyright")
+      log_warn "Warning: pyright install failed"
+    fi
+  fi
+  if ! command -v ruff &>/dev/null; then
+    log_info "Installing ruff via pip (compiles from source on BSD)..."
+    if python3 -m pip install --user --break-system-packages ruff 2>/dev/null ||
+      pip3 install --user --break-system-packages ruff 2>/dev/null; then
+      log_success "✓ ruff installed"
+    else
+      FAILED_PYTHON+=("ruff")
+      log_warn "Warning: ruff install failed (no BSD wheel, source build failed)"
+    fi
   fi
 
   # NPM packages

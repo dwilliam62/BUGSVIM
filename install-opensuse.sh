@@ -85,33 +85,44 @@ check_and_install_deps() {
   echo -e "${BLUE}╚════════════════════════════════════════════════════════════════╝${NC}"
   echo ""
 
+  local zypper_pkgs=(
+    neovim
+    git
+    ripgrep
+    fd
+    curl
+    jq
+    gcc
+    gcc-c++
+    make
+    pkg-config
+    tree-sitter-cli
+    lua
+    # openSUSE ships versioned luarocks packages; the plain 'luarocks' name does
+    # not exist and would fail the whole zypper transaction.
+    lua54-luarocks
+    python3
+    python3-pip
+    nodejs
+    npm
+    clang
+    clang-tools
+    lua-language-server
+    shfmt
+    lazygit
+    bat
+    wl-clipboard
+  )
+
+  # zypper installs nothing at all when one name has no provider, so a single
+  # unavailable package used to skip the whole list.
   log_info "Installing openSUSE packages via zypper..."
-  sudo zypper install -y \
-    neovim \
-    git \
-    ripgrep \
-    fd \
-    curl \
-    jq \
-    gcc \
-    gcc-c++ \
-    make \
-    pkg-config \
-    tree-sitter-cli \
-    lua \
-    luarocks \
-    python3 \
-    python3-pip \
-    nodejs \
-    npm \
-    clang \
-    clang-tools \
-    lua-language-server \
-    shfmt \
-    lazygit \
-    bat \
-    wl-clipboard || true
-  sudo zypper install -y lua-luacheck 2>/dev/null || sudo zypper install -y luacheck 2>/dev/null || true
+  install_packages_resilient "sudo zypper install -y" "${zypper_pkgs[@]}" || true
+
+  # luacheck is packaged as lua-luacheck on some releases
+  if ! command -v luacheck &>/dev/null; then
+    install_packages_resilient "sudo zypper install -y" lua-luacheck luacheck || true
+  fi
 
   # Luacheck fallback via luarocks
   if ! command -v luacheck &>/dev/null && command -v luarocks &>/dev/null; then

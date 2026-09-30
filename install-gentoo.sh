@@ -81,10 +81,9 @@ check_and_install_packages() {
 
   if [ ${#to_install[@]} -gt 0 ]; then
     log_info "Installing missing Portage packages: ${to_install[*]}"
-    sudo emerge --noreplace "${to_install[@]}" || {
-      FAILED_PACKAGES+=("${to_install[@]}")
-      log_warn "Warning: Some Portage packages failed to install"
-    }
+    # emerge aborts when any atom cannot be satisfied, so one unknown atom used
+    # to leave every other package unmerged.
+    install_packages_resilient "sudo emerge --noreplace" "${to_install[@]}" || true
   else
     log_success "✓ All requested Portage packages already installed"
   fi
@@ -141,6 +140,10 @@ check_and_install_deps() {
   echo -e "${BLUE}╚════════════════════════════════════════════════════════════════╝${NC}"
   echo ""
 
+  # lazygit, stylua and lua-language-server are not in the main tree; they live in
+  # the GURU overlay, which the per-tool steps below expect to be enabled.
+  enable_repo guru git https://anongit.gentoo.org/git/repo/proj/guru.git || true
+
   log_info "Checking and installing Portage packages..."
   check_and_install_packages \
     dev-vcs/git \
@@ -149,19 +152,30 @@ check_and_install_deps() {
     net-misc/curl \
     app-misc/jq \
     sys-devel/gcc \
-    dev-ruby/pkg-config \
+    dev-util/pkgconf \
     dev-util/tree-sitter-cli \
     dev-lang/lua \
     dev-lua/luarocks \
     dev-lang/python \
     net-libs/nodejs \
-    dev-vcs/lazygit \
+    llvm-core/clang \
     sys-apps/bat \
     gui-apps/wl-clipboard || true
 
-  # stylua
+  # lazygit (GURU overlay)
+  if ! command -v lazygit &>/dev/null; then
+    if ! sudo emerge --noreplace dev-vcs/lazygit 2>/dev/null; then
+      log_warn "○ lazygit (not available; the GURU overlay provides it)"
+      FAILED_PACKAGES+=("lazygit")
+    fi
+  fi
+
+  # stylua (GURU overlay)
   if ! command -v stylua &>/dev/null; then
-    sudo emerge --noreplace dev-util/stylua 2>/dev/null || true
+    if ! sudo emerge --noreplace dev-util/stylua 2>/dev/null; then
+      log_warn "○ stylua (not available; the GURU overlay provides it)"
+      FAILED_PACKAGES+=("stylua")
+    fi
   fi
 
   # luacheck
@@ -173,14 +187,20 @@ check_and_install_deps() {
     fi
   fi
 
-  # shfmt
+  # shfmt (not in the main tree; GURU provides it)
   if ! command -v shfmt &>/dev/null; then
-    sudo emerge --noreplace dev-util/sh 2>/dev/null || true
+    if ! sudo emerge --noreplace dev-util/shfmt 2>/dev/null; then
+      log_warn "○ shfmt (not available; install from GURU or run 'go install mvdan.cc/sh/v3/cmd/shfmt@latest')"
+      FAILED_BUILD+=("shfmt")
+    fi
   fi
 
   # ruff
   if ! command -v ruff &>/dev/null; then
-    sudo emerge --noreplace dev-util/ruff 2>/dev/null || pip3 install --user ruff 2>/dev/null || true
+    sudo emerge --noreplace dev-util/ruff 2>/dev/null || pip3 install --user ruff 2>/dev/null || {
+      log_warn "○ ruff (install failed)"
+      FAILED_PYTHON+=("ruff")
+    }
   fi
 
   # pyright
@@ -192,9 +212,12 @@ check_and_install_deps() {
     fi
   fi
 
-  # lua-language-server
+  # lua-language-server (GURU overlay)
   if ! command -v lua-language-server &>/dev/null && ! qlist -I dev-util/lua-language-server &>/dev/null; then
-    sudo emerge --noreplace dev-util/lua-language-server 2>/dev/null || true
+    if ! sudo emerge --noreplace dev-util/lua-language-server 2>/dev/null; then
+      log_warn "○ lua-language-server (not available; the GURU overlay provides it)"
+      FAILED_PACKAGES+=("lua-language-server")
+    fi
   fi
 
   # npm packages

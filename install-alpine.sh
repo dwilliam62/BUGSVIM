@@ -52,35 +52,40 @@ check_and_install_deps() {
   log_info "Updating package indexes..."
   run_as_root apk update || true
 
+  local apk_pkgs=(
+    git
+    ripgrep
+    fd
+    curl
+    jq
+    build-base
+    pkgconf
+    tree-sitter-cli
+    lua5.1
+    luarocks
+    python3
+    py3-pip
+    nodejs
+    npm
+    rust
+    clang
+    cmd:clangd
+    cmd:clang-format
+    shfmt
+    stylua
+    luacheck
+    lazygit
+    bat
+    wl-clipboard
+    py3-ruff
+  )
+  # NOTE: Alpine packages neither lua5.1-luacheck nor pyright (py3-pyright);
+  # pyright is installed via pip below.
+
+  # apk installs nothing at all when one name cannot be selected, so a single
+  # unavailable package used to skip the whole list.
   log_info "Installing apk packages..."
-  run_as_root apk add --no-interactive \
-    git \
-    ripgrep \
-    fd \
-    curl \
-    jq \
-    build-base \
-    pkgconf \
-    tree-sitter-cli \
-    lua5.1 \
-    luarocks \
-    python3 \
-    py3-pip \
-    nodejs \
-    npm \
-    rust \
-    clang \
-    cmd:clangd \
-    cmd:clang-format \
-    shfmt \
-    stylua \
-    luacheck \
-    lua5.1-luacheck \
-    lazygit \
-    bat \
-    wl-clipboard \
-    py3-ruff \
-    py3-pyright || true
+  install_packages_resilient "run_as_root apk add --no-interactive" "${apk_pkgs[@]}" || true
 
   # lua-language-server (community repo)
   if ! command -v lua-language-server &>/dev/null; then

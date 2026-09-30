@@ -101,10 +101,9 @@ check_and_install_deps() {
 
   if [ ${#missing_pacman[@]} -gt 0 ]; then
     log_info "Installing missing pacman packages: ${missing_pacman[*]}..."
-    sudo pacman -S --needed --noconfirm "${missing_pacman[@]}" || {
-      FAILED_PACKAGES+=("${missing_pacman[@]}")
-      log_warn "Warning: Some pacman packages failed to install"
-    }
+    # pacman aborts the whole transaction on an unknown target, so one bad name
+    # used to leave every other package uninstalled.
+    install_packages_resilient "sudo pacman -S --needed --noconfirm" "${missing_pacman[@]}" || true
   else
     log_success "✓ All core pacman packages installed"
   fi

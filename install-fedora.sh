@@ -28,45 +28,18 @@ fi
 # one package that does not exist (e.g. shfmt on Fedora) silently prevents every
 # other package in the list from being installed.
 dnf_install_packages() {
-  local pkgs=("$@")
-  if [ ${#pkgs[@]} -eq 0 ]; then
-    return 0
-  fi
-
   local dnf_bin="dnf"
   if command -v dnf5 >/dev/null 2>&1; then
     dnf_bin="dnf5"
   fi
 
-  local dnf_args=(-y)
+  local skip_flag="--skip-broken --setopt=strict=0"
   if [ "$dnf_bin" = "dnf5" ]; then
-    dnf_args+=(--skip-unavailable)
-  else
-    dnf_args+=(--skip-broken --setopt=strict=0)
+    skip_flag="--skip-unavailable"
   fi
 
   log_info "Installing Fedora packages via ${dnf_bin}..."
-  if sudo "$dnf_bin" install "${dnf_args[@]}" "${pkgs[@]}"; then
-    return 0
-  fi
-
-  # Resolution can still fail as a whole (older dnf, conflicting arguments).
-  # Retry one package at a time so a single bad name cannot block the rest.
-  log_warn "⚠ Bulk install failed; retrying packages individually..."
-  local failed=()
-  for pkg in "${pkgs[@]}"; do
-    if sudo "$dnf_bin" install "${dnf_args[@]}" "$pkg" >/dev/null 2>&1; then
-      log_success "✓ $pkg"
-    else
-      log_warn "○ $pkg (unavailable)"
-      failed+=("$pkg")
-    fi
-  done
-
-  if [ ${#failed[@]} -gt 0 ]; then
-    FAILED_PACKAGES+=("${failed[@]}")
-    return 1
-  fi
+  install_packages_resilient "sudo $dnf_bin install -y $skip_flag" "$@"
 }
 
 ensure_neovim_supported() {

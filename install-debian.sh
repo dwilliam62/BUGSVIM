@@ -90,32 +90,45 @@ check_and_install_deps() {
   log_info "Updating package lists..."
   sudo apt-get update || true
 
+  local apt_pkgs=(
+    git
+    ripgrep
+    fd-find
+    curl
+    jq
+    build-essential
+    pkg-config
+    tree-sitter-cli
+    lua5.1
+    luarocks
+    lua-check
+    python3-venv
+    python3-pip
+    nodejs
+    npm
+    clang
+    clangd
+    clang-tools
+    shfmt
+    clang-format
+    lazygit
+    bat
+    wl-clipboard
+    rustup
+  )
+
+  # apt-get installs nothing at all when one name cannot be located, so a single
+  # unavailable package used to skip the whole list.
   log_info "Installing system packages via apt..."
-  sudo apt-get install -y \
-    git \
-    ripgrep \
-    fd-find \
-    curl \
-    jq \
-    build-essential \
-    pkg-config \
-    tree-sitter-cli \
-    lua5.1 \
-    luarocks \
-    lua-check \
-    python3-venv \
-    python3-pip \
-    nodejs \
-    npm \
-    clang \
-    clangd \
-    clang-tools \
-    shfmt \
-    clang-format \
-    lazygit \
-    bat \
-    wl-clipboard \
-    rustup || sudo apt-get install -y luacheck 2>/dev/null || true
+  install_packages_resilient "sudo apt-get install -y" "${apt_pkgs[@]}" || true
+
+  # Older releases package luacheck under its own name rather than lua-check
+  if ! command -v luacheck &>/dev/null; then
+    install_packages_resilient "sudo apt-get install -y" luacheck || true
+  fi
+
+  # Debian/Ubuntu do not package lua-language-server, so use the upstream release
+  install_lua_language_server_from_release || true
 
   # Luacheck fallback via luarocks
   if ! command -v luacheck &>/dev/null && command -v luarocks &>/dev/null; then

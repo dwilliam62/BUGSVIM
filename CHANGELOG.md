@@ -31,6 +31,23 @@
   - Enables the relativesure/all-packages, atim/lazygit and vgaetera/extras COPRs (via `dnf copr`, or by writing a repo file on images with no copr plugin)
   - Added `lua-language-server`, uses `tree-sitter-cli` on the rpm-ostree path, and warns that layered packages need a reboot before they are usable
 - Docs: Fedora sections of `INSTALL.md`, `INSTALL.es.md`, `PACKAGES.txt` and `INSTALL-SCRIPTS.md` (+`.es.md`) no longer list `shfmt` as a Fedora package and now enable the required COPRs
+- All distro installers: package installs are resilient now
+  - `apt`, `dnf`, `zypper`, `pacman`, `apk`, `emerge`, `pkg`, `pkgin` and `pkg_add` resolve the entire argument list before installing, so a single unavailable name aborted the transaction and installed *nothing* (verified in containers)
+  - New shared `install_packages_resilient` helper in `lib/common.sh`: install the batch first, then retry one package at a time so the resolvable packages still land and only genuinely unavailable names are reported
+  - `install-fedora.sh` and `install-bazzite.sh` now use the same helper (dnf keeps `--skip-unavailable` as a first pass)
+- Package audit fixes (each previously aborted its whole transaction)
+  - openSUSE: `luarocks` -> `lua54-luarocks` (openSUSE only ships versioned luarocks packages)
+  - Alpine: dropped `lua5.1-luacheck` and `py3-pyright` (neither exists; pyright comes from pip)
+  - Gentoo: `dev-ruby/pkg-config` -> `dev-util/pkgconf`, added `llvm-core/clang`, moved overlay-only tools to guarded steps, and enables the GURU overlay
+  - Debian/Ubuntu: `lua-language-server` is not packaged, so it is installed from the upstream release into `~/.local`
+  - Docs: Debian/Ubuntu and Arch one-liners no longer list packages those repositories do not provide (`lua-language-server`, `bash-language-server`, `nil`, `alejandra`, `prettier`, `stylua`, `lazygit`)
+- BSD installers validated on real FreeBSD 15, OpenBSD 7.8 and NetBSD 11 VMs
+  - `run_as_root` now probes which privilege tool actually works: FreeBSD ships `doas` with `permit persist :wheel`, which prompted for a password and aborted the whole run even though `sudo` was passwordless
+  - FreeBSD: `lua`, `lua-luarocks`, `lua-luacheck`, `lua51-luacheck` and `py3-pip` do not exist; uses `lua54`, `lua54-luarocks`, `lua54-luacheck`, plus native `ruff` and `py<ver>-pyright` with pip as fallback
+  - OpenBSD: dropped `pkgconf`, `npm` (the node package provides it) and `lazygit` (not packaged), fixed `luarocks--lua51` -> `luarocks-lua54`, and added `clang-tools-extra` (provides unversioned clangd/clang-format) and `lua-language-server`
+  - All three BSD scripts now install ruff/pyright (previously missing entirely) and pass `--break-system-packages`, since BSD Python is marked externally managed
+  - `update_treesitter_cli` sets `LIBCLANG_PATH` when libclang lives in a versioned llvm directory (`/usr/local/llvm*/lib`), which makes the cargo fallback succeed on OpenBSD (verified: tree-sitter-cli 0.27.0)
+  - Package-install failures now log the package manager's own error line instead of a generic "unavailable"
 
 #### 📅 **Updated: August, 2026**
 

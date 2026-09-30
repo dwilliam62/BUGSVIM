@@ -52,32 +52,37 @@ check_and_install_deps() {
   log_info "Updating FreeBSD packages..."
   run_as_root pkg update || true
 
+  # NOTE: FreeBSD names its Lua packages by version (lua54, lua54-luarocks,
+  # lua54-luacheck) and packages no plain 'lua', 'lua-luarocks' or 'py3-pip'.
+  local freebsd_pkgs=(
+    git
+    ripgrep
+    fd-find
+    curl
+    jq
+    base64
+    gmake
+    pkgconf
+    tree-sitter-cli
+    lua54
+    lua54-luarocks
+    lua54-luacheck
+    python3
+    node
+    npm
+    llvm
+    bash
+    shfmt
+    stylua
+    lazygit
+    bat
+    xclip
+  )
+
+  # pkg installs nothing at all when one package cannot be matched, so a single
+  # unavailable name used to skip the whole list.
   log_info "Installing FreeBSD pkg packages..."
-  run_as_root pkg install -y \
-    git \
-    ripgrep \
-    fd-find \
-    curl \
-    jq \
-    base64 \
-    gmake \
-    pkgconf \
-    tree-sitter-cli \
-    lua \
-    lua-luarocks \
-    lua-luacheck \
-    lua51-luacheck \
-    python3 \
-    py3-pip \
-    node \
-    npm \
-    llvm \
-    bash \
-    shfmt \
-    stylua \
-    lazygit \
-    bat \
-    xclip || true
+  install_packages_resilient "run_as_root pkg install -y" "${freebsd_pkgs[@]}" || true
 
   # Luacheck fallback via luarocks
   if ! command -v luacheck &>/dev/null && command -v luarocks &>/dev/null; then
@@ -89,6 +94,30 @@ check_and_install_deps() {
   if ! command -v rustc &>/dev/null; then
     log_info "Installing Rust toolchain via rustup..."
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y || true
+  fi
+
+  # Python packages. FreeBSD names pip/pyright per Python version (py312-pip,
+  # py312-pyright) and ships an unversioned ruff package, so prefer those and
+  # only fall back to pip (pip is not always exposed as 'pip3' there).
+  local py_ver
+  py_ver="$(python3 -c 'import sys; print("%d%d" % sys.version_info[:2])' 2>/dev/null || true)"
+  if [ -n "$py_ver" ]; then
+    if ! python3 -m pip --version &>/dev/null; then
+      install_packages_resilient "run_as_root pkg install -y" "py${py_ver}-pip" || true
+    fi
+    if ! command -v ruff &>/dev/null || ! command -v pyright &>/dev/null; then
+      install_packages_resilient "run_as_root pkg install -y" ruff "py${py_ver}-pyright" || true
+    fi
+  fi
+  if ! command -v ruff &>/dev/null || ! command -v pyright &>/dev/null; then
+    log_info "Installing Python packages (ruff, pyright) via pip..."
+    if python3 -m pip install --user --break-system-packages ruff pyright 2>/dev/null ||
+      pip3 install --user --break-system-packages ruff pyright 2>/dev/null; then
+      log_success "✓ ruff and pyright installed"
+    else
+      FAILED_PYTHON+=("ruff" "pyright")
+      log_warn "Warning: Python packages failed to install"
+    fi
   fi
 
   # NPM packages

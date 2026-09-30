@@ -81,13 +81,135 @@ run_as_root() {
   log_debug "Executing privileged command: $*"
   if [ "${EUID:-$(id -u)}" -eq 0 ]; then
     "$@"
-  elif command -v doas >/dev/null 2>&1; then
-    doas "$@"
-  elif command -v sudo >/dev/null 2>&1; then
-    sudo "$@"
+    return
+  fi
+
+  # 'doas' is not always configured for passwordless use (FreeBSD ships
+  # 'permit persist :wheel', which still needs the first password), so pick a
+  # tool that actually works without prompting instead of assuming an order.
+  if [ -z "${ROOT_CMD:-}" ]; then
+    if command -v doas >/dev/null 2>&1 && doas -n true >/dev/null 2>&1; then
+      ROOT_CMD="doas"
+    elif command -v sudo >/dev/null 2>&1 && sudo -n true >/dev/null 2>&1; then
+      ROOT_CMD="sudo"
+    elif command -v doas >/dev/null 2>&1; then
+      ROOT_CMD="doas"
+    elif command -v sudo >/dev/null 2>&1; then
+      ROOT_CMD="sudo"
+    else
+      log_error "Error: Root privileges required via 'sudo' or 'doas'."
+      exit 1
+    fi
+    log_debug "Using '${ROOT_CMD}' for privileged commands"
+  fi
+
+  "$ROOT_CMD" "$@"
+}
+
+# ================================================================================================
+# Resilient Package Installation
+# ================================================================================================
+# Most package managers resolve every argument before installing anything, so a
+# single unavailable name aborts the whole transaction and *nothing* is
+# installed (verified for apt, dnf, zypper, pacman, apk and emerge). Install the
+# batch first, then retry one package at a time so the resolvable packages still
+# land and only the genuinely unavailable names are reported.
+#
+# Usage: install_packages_resilient "<install command>" pkg1 [pkg2 ...]
+install_packages_resilient() {
+  local install_cmd="$1"
+  shift
+
+  local pkgs=("$@")
+  if [ ${#pkgs[@]} -eq 0 ]; then
+    return 0
+  fi
+
+  log_debug "Batch install: ${install_cmd} ${pkgs[*]}"
+  # shellcheck disable=SC2086 # the command prefix is intentionally word-split
+  if $install_cmd "${pkgs[@]}"; then
+    return 0
+  fi
+
+  log_warn "⚠ Batch install failed; retrying packages individually so one unavailable name cannot block the rest..."
+  local failed=()
+  for pkg in "${pkgs[@]}"; do
+    local out
+    # shellcheck disable=SC2086
+    if out="$($install_cmd "$pkg" 2>&1)"; then
+      log_success "✓ $pkg"
+    else
+      # Some managers (pkgin, pkg_add) return non-zero for unrelated package
+      # errors, so show what they actually said instead of guessing.
+      local reason
+      reason="$(printf '%s\n' "$out" | sed -e 's/^[[:space:]]*//' -e '/^$/d' | tail -1 | cut -c1-140)"
+      if [ -n "$reason" ]; then
+        log_warn "○ $pkg (failed: ${reason})"
+      else
+        log_warn "○ $pkg (failed)"
+      fi
+      failed+=("$pkg")
+    fi
+  done
+
+  if [ ${#failed[@]} -gt 0 ]; then
+    FAILED_PACKAGES+=("${failed[@]}")
+    return 1
+  fi
+  return 0
+}
+
+# ================================================================================================
+# Lua Language Server (release tarball fallback)
+# ================================================================================================
+# Debian/Ubuntu do not package lua-language-server, so fall back to the official
+# GitHub release tarball: extracted under ~/.local/lua-language-server with a
+# wrapper in ~/.local/bin.
+install_lua_language_server_from_release() {
+  if command -v lua-language-server >/dev/null 2>&1; then
+    log_success "✓ lua-language-server already installed"
+    return 0
+  fi
+
+  local arch
+  case "$(uname -m)" in
+  x86_64 | amd64) arch="x64" ;;
+  aarch64 | arm64) arch="arm64" ;;
+  *)
+    log_warn "⚠ Unsupported architecture for the lua-language-server release: $(uname -m)"
+    FAILED_BUILD+=("lua-language-server")
+    return 1
+    ;;
+  esac
+
+  local tag
+  tag="$(curl -fsSL --max-time 30 https://api.github.com/repos/LuaLS/lua-language-server/releases/latest 2>/dev/null |
+    sed -n 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)"
+  if [ -z "$tag" ]; then
+    log_warn "⚠ Unable to determine the latest lua-language-server release"
+    FAILED_BUILD+=("lua-language-server")
+    return 1
+  fi
+
+  local dest="${HOME}/.local/lua-language-server"
+  local url="https://github.com/LuaLS/lua-language-server/releases/download/${tag}/lua-language-server-${tag}-linux-${arch}.tar.gz"
+
+  log_info "Installing lua-language-server ${tag} (${arch}) to ${dest}..."
+  mkdir -p "$dest" "${HOME}/.local/bin"
+  if curl -fsSL --max-time 300 "$url" | tar -xz -C "$dest"; then
+    # The launcher resolves main.lua relative to its own location, so wrap it
+    # rather than symlinking from ~/.local/bin.
+    cat >"${HOME}/.local/bin/lua-language-server" <<EOF
+#!/bin/sh
+exec "${dest}/bin/lua-language-server" "\$@"
+EOF
+    chmod +x "${HOME}/.local/bin/lua-language-server"
+    export PATH="${HOME}/.local/bin:$PATH"
+    log_success "✓ lua-language-server ${tag} installed to ${HOME}/.local/bin"
   else
-    log_error "Error: Root privileges required via 'sudo' or 'doas'."
-    exit 1
+    log_warn "⚠ lua-language-server download failed: $url"
+    FAILED_BUILD+=("lua-language-server")
+    return 1
   fi
 }
 
@@ -315,6 +437,18 @@ update_treesitter_cli() {
   if ! command -v tree-sitter >/dev/null 2>&1; then
     log_warn "tree-sitter CLI not found. Installing..."
     if command -v cargo >/dev/null 2>&1; then
+      # tree-sitter-cli's build uses bindgen, which needs libclang at build time.
+      # OpenBSD/NetBSD keep it under a versioned llvm directory.
+      if [ -z "${LIBCLANG_PATH:-}" ]; then
+        local libclang_dir
+        for libclang_dir in /usr/local/llvm*/lib /usr/local/lib /usr/lib/llvm-*/lib /usr/lib64/llvm*/lib; do
+          if compgen -G "${libclang_dir}/libclang.so*" >/dev/null; then
+            export LIBCLANG_PATH="$libclang_dir"
+            log_debug "Using LIBCLANG_PATH=${LIBCLANG_PATH}"
+            break
+          fi
+        done
+      fi
       log_info "Installing tree-sitter-cli via cargo..."
       if cargo install tree-sitter-cli --root "${HOME}/.local"; then
         log_success "✓ tree-sitter-cli installed via cargo"

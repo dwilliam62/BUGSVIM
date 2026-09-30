@@ -15,12 +15,16 @@ DEBIAN / UBUNTU
 
 FULL INSTALLATION (All LSPs + Formatters):
 
+# NOTE: apt-get aborts the entire transaction when a single name is unavailable,
+# and Debian/Ubuntu package neither lua-language-server, bash-language-server,
+# nil, alejandra, prettier nor stylua. Get those from npm/upstream instead
+# (install-debian.sh does this automatically).
 sudo apt-get update && sudo apt-get install -y \
   neovim git ripgrep fd-find curl jq build-essential pkg-config \
-  lua-language-server lua-check luarocks python3-pip nodejs npm clang clang-tools \
-  bash-language-server rustup nil stylua shfmt clang-format prettier \
-  lazygit bat wl-clipboard && \
-npm install -g @fsouza/prettierd vscode-langservers-extracted && \
+  lua-check luarocks python3-pip nodejs npm clang clang-tools \
+  rustup shfmt clang-format \
+  bat wl-clipboard && \
+npm install -g bash-language-server @fsouza/prettierd vscode-langservers-extracted && \
 pip3 install --user ruff pyright
 
 ---
@@ -71,7 +75,7 @@ FULL INSTALLATION (All LSPs + Formatters):
 sudo pacman -S --noconfirm \
   neovim git ripgrep fd curl base-devel pkg-config \
   lua-language-server luacheck luarocks python nodejs npm clang \
-  bash-language-server rustup nil stylua shfmt clang prettier \
+  bash-language-server rustup stylua shfmt clang prettier \
   lazygit bat wl-clipboard && \
 npm install -g @fsouza/prettierd vscode-langservers-extracted
 
@@ -85,10 +89,13 @@ FULL INSTALLATION WITH AUR (Recommended for Arch):
 sudo pacman -S --noconfirm \
   neovim git ripgrep fd curl base-devel pkg-config \
   lua-language-server luacheck luarocks python nodejs npm clang \
-  bash-language-server rustup nil stylua shfmt clang prettier \
+  bash-language-server rustup stylua shfmt clang prettier \
   lazygit bat wl-clipboard && \
 npm install -g @fsouza/prettierd vscode-langservers-extracted && \
 yay -S --noconfirm hyprls pyright alejandra-bin prettierd
+
+# nil (Nix LSP) is not in the Arch repos or the AUR: build it from source
+# https://github.com/oxalica/nil
 
 ---
 

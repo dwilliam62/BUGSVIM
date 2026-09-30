@@ -105,30 +105,35 @@ check_and_install_deps() {
   log_info "Updating NetBSD packages via pkgin..."
   run_as_root pkgin -y update || true
 
+  local netbsd_pkgs=(
+    git
+    ripgrep
+    fd-find
+    curl
+    jq
+    gmake
+    tree-sitter-cli
+    lua54
+    lua54-rocks
+    lua51-check
+    python313
+    py313-pip
+    nodejs
+    llvm
+    clang
+    bash
+    shfmt
+    stylua
+    lazygit
+    bat
+    xclip
+    rust-bin
+  )
+
+  # pkgin refuses the whole install when one package is unknown, so a single
+  # unavailable name used to skip the whole list.
   log_info "Installing NetBSD packages via pkgin..."
-  run_as_root pkgin -y in \
-    git \
-    ripgrep \
-    fd-find \
-    curl \
-    jq \
-    gmake \
-    tree-sitter-cli \
-    lua54 \
-    lua54-rocks \
-    lua51-check \
-    python313 \
-    py313-pip \
-    nodejs \
-    llvm \
-    clang \
-    bash \
-    shfmt \
-    stylua \
-    lazygit \
-    bat \
-    xclip \
-    rust-bin || true
+  install_packages_resilient "run_as_root pkgin -y in" "${netbsd_pkgs[@]}" || true
 
   # Ensure pkgconf or pkg-config is available
   if ! command -v pkg-config &>/dev/null && ! command -v pkgconf &>/dev/null; then
@@ -147,6 +152,31 @@ check_and_install_deps() {
   if ! command -v rustc &>/dev/null; then
     log_info "Installing Rust toolchain via rustup..."
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y || true
+  fi
+
+  # Python packages. NetBSD marks its Python as externally managed and pip may
+  # only be reachable as a module. ruff has neither a pkgsrc package nor a wheel,
+  # so pip builds it from source, which fails on some hosts; install it
+  # separately so that failure cannot block pyright (pure Python).
+  if ! command -v pyright &>/dev/null && ! command -v pyright-langserver &>/dev/null; then
+    log_info "Installing pyright via pip..."
+    if python3 -m pip install --user --break-system-packages pyright 2>/dev/null ||
+      pip3 install --user --break-system-packages pyright 2>/dev/null; then
+      log_success "✓ pyright installed"
+    else
+      FAILED_PYTHON+=("pyright")
+      log_warn "Warning: pyright install failed"
+    fi
+  fi
+  if ! command -v ruff &>/dev/null; then
+    log_info "Installing ruff via pip (builds from source; no pkgsrc package)..."
+    if python3 -m pip install --user --break-system-packages ruff 2>/dev/null ||
+      pip3 install --user --break-system-packages ruff 2>/dev/null; then
+      log_success "✓ ruff installed"
+    else
+      FAILED_PYTHON+=("ruff")
+      log_warn "Warning: ruff install failed (no wheel, source build failed)"
+    fi
   fi
 
   # NPM packages
