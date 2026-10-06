@@ -15,17 +15,18 @@ This is **Tsukiyo NeoVim** (also referenced as **bugsvim**), a modern Lua-based 
 ├── install.sh                # Unified root installer & auto-dispatcher (--distro, --debug, --list-distros)
 ├── lib/
 │   └── common.sh             # Sourced shared library for all install scripts
-├── install-alpine.sh         # Alpine Linux installation script
-├── install-arch.sh           # Arch Linux installation script
-├── install-bazzite.sh        # Bazzite (Fedora Atomic) installation script
-├── install-debian.sh         # Debian / Ubuntu installation script
-├── install-fedora.sh         # Fedora Linux installation script
-├── install-freebsd.sh        # FreeBSD installation script
-├── install-gentoo.sh         # Gentoo Linux installation script
-├── install-netbsd.sh         # NetBSD installation script
-├── install-openbsd.sh        # OpenBSD installation script
-├── install-opensuse.sh       # OpenSUSE installation script
-└── install-windows.ps1       # Windows PowerShell installation script
+├── installers/               # Per-distro drivers, dispatched to by install.sh
+│   ├── install-alpine.sh     # Alpine Linux installation script
+│   ├── install-arch.sh       # Arch Linux installation script
+│   ├── install-bazzite.sh    # Bazzite (Fedora Atomic) installation script
+│   ├── install-debian.sh     # Debian / Ubuntu installation script
+│   ├── install-fedora.sh     # Fedora Linux installation script
+│   ├── install-freebsd.sh    # FreeBSD installation script
+│   ├── install-gentoo.sh     # Gentoo Linux installation script
+│   ├── install-netbsd.sh     # NetBSD installation script
+│   ├── install-openbsd.sh    # OpenBSD installation script
+│   └── install-opensuse.sh   # OpenSUSE installation script
+└── install-windows.ps1       # Windows PowerShell installation script (standalone; install.sh does not handle Windows)
 ```
 
 ### Treesitter Architecture
@@ -38,18 +39,23 @@ This is **Tsukiyo NeoVim** (also referenced as **bugsvim**), a modern Lua-based 
 
 ### Installation & Update Scripts
 
-Each `install-<distro>.sh` script (and `install-windows.ps1` on Windows) provides full installation, dependency, and modular update modes:
-- **Full Install**: `bash install-<distro>.sh` (or `.\install-windows.ps1 -InstallDeps`)
-- **Force Reinstall**: `bash install-<distro>.sh -f` / `--force` (or `.\install-windows.ps1 -Force`)
-- **Update Mode**: `bash install-<distro>.sh -u` / `--update` (or `.\install-windows.ps1 -Update`)
+The root `install.sh` is the single entry point: it auto-detects the distribution and `exec`s the matching driver in `installers/`. Each `installers/install-<distro>.sh` driver (and `install-windows.ps1` on Windows, which is standalone) also works when invoked directly and provides full installation, dependency, and modular update modes:
+- **Full Install**: `bash install.sh` (or `bash installers/install-<distro>.sh`, or `.\install-windows.ps1 -InstallDeps`)
+- **Force Reinstall**: `bash installers/install-<distro>.sh -f` / `--force` (or `.\install-windows.ps1 -Force`)
+- **Update Mode**: `bash installers/install-<distro>.sh -u` / `--update` (or `.\install-windows.ps1 -Update`)
   - Runs the `UPDATE_TASKS` pipeline.
   - Verifies and installs `tree-sitter-cli` if missing.
   - Cleans legacy `nvim-treesitter` caches from older `master` checkouts.
   - Syncs the updated `nvim/` config directory to `~/.config/nvim` (or `%LOCALAPPDATA%\nvim` on Windows).
-- **Dependency Check & Install**: `bash install-<distro>.sh -d` / `--deps` (or `.\install-windows.ps1 -Deps`)
+- **Dependency Check & Install**: `bash installers/install-<distro>.sh -d` / `--deps` (or `.\install-windows.ps1 -Deps`)
   - Checks for all required system packages, language servers, formatters, linters, npm packages, python packages, and luarocks tools.
   - Installs any missing dependencies.
   - Runs full verification.
+- **Config Update Mode**: `bash install.sh -c` / `--update-config`
+  - Pulls the repo (`git pull --ff-only`), backs up `~/.config/nvim`, re-syncs it from `nvim/` (pruning entries no longer in the repo, dotfiles included), then runs `nvim --headless "+Lazy! sync" +qa` so new plugins are installed.
+  - Use this after new plugins are added upstream; `-u` only re-syncs the local checkout and never removes files deleted in the repo.
+
+The full-install path also runs `ensure_org_directory`, which creates `~/org` and `~/org/refile.org` to match the org.nvim plugin spec (`org_directory`, `agenda_files`, `default_notes_file`). Drivers set `REPO_ROOT` to the repo root so `lib/common.sh` and `nvim/` resolve regardless of the current directory.
 
 ### Plugin Manager: lazy.nvim
 
@@ -100,7 +106,7 @@ LSP is managed through two layers:
 | Edit NeoVim config | `nvim ~/.config/nvim/init.lua` (or `<leader>rc` inside NeoVim) |
 | Format Lua files | `stylua nvim/lua/` (or in NeoVim: `<leader>cf`) |
 | Check Lua code | `cd nvim && luacheck lua/` |
-| Run Distro Update | `bash install-<distro>.sh -u` |
+| Run Distro Update | `bash install.sh -u` (or `bash installers/install-<distro>.sh -u`) |
 
 ### Plugin & Treesitter Management
 

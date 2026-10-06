@@ -77,17 +77,27 @@ Esta configuración es una bifurcación (fork) de **[BUGSVIM](https://github.com
 
 ### Instalación Rápida (Recomendada)
 
-bugsvim proporciona scripts de instalación y actualización automatizados para las principales distribuciones:
+bugsvim proporciona scripts de instalación y actualización automatizados para las principales distribuciones.
+
+#### Un solo comando (detecta tu distribución automáticamente)
+
+```bash
+git clone https://github.com/dwilliam62/bugsvim ~/.config/bugsvim
+cd ~/.config/bugsvim
+bash install.sh
+```
+
+`install.sh` detecta tu sistema/distribución y se despacha al driver correspondiente en `installers/`. Es el punto de entrada recomendado - los comandos por distribución de abajo son alternativas explícitas para cuando prefieras elegir el driver tú mismo.
 
 #### Arch Linux
 
 ```bash
 git clone https://github.com/dwilliam62/bugsvim ~/.config/bugsvim
 cd ~/.config/bugsvim
-bash install-arch.sh
+bash installers/install-arch.sh
 
 # O actualizar instalación existente
-bash install-arch.sh -u
+bash installers/install-arch.sh -u
 ```
 
 #### Debian / Ubuntu
@@ -95,10 +105,10 @@ bash install-arch.sh -u
 ```bash
 git clone https://github.com/dwilliam62/bugsvim ~/.config/bugsvim
 cd ~/.config/bugsvim
-bash install-debian.sh
+bash installers/install-debian.sh
 
 # O actualizar instalación existente
-bash install-debian.sh -u
+bash installers/install-debian.sh -u
 ```
 
 #### Fedora
@@ -106,10 +116,10 @@ bash install-debian.sh -u
 ```bash
 git clone https://github.com/dwilliam62/bugsvim ~/.config/bugsvim
 cd ~/.config/bugsvim
-bash install-fedora.sh
+bash installers/install-fedora.sh
 
 # O actualizar instalación existente
-bash install-fedora.sh -u
+bash installers/install-fedora.sh -u
 ```
 
 #### Gentoo Linux
@@ -117,10 +127,10 @@ bash install-fedora.sh -u
 ```bash
 git clone https://github.com/dwilliam62/bugsvim ~/.config/bugsvim
 cd ~/.config/bugsvim
-bash install-gentoo.sh
+bash installers/install-gentoo.sh
 
 # O actualizar instalación existente
-bash install-gentoo.sh -u
+bash installers/install-gentoo.sh -u
 ```
 
 #### OpenSUSE
@@ -128,10 +138,10 @@ bash install-gentoo.sh -u
 ```bash
 git clone https://github.com/dwilliam62/bugsvim ~/.config/bugsvim
 cd ~/.config/bugsvim
-bash install-opensuse.sh
+bash installers/install-opensuse.sh
 
 # O actualizar instalación existente
-bash install-opensuse.sh -u
+bash installers/install-opensuse.sh -u
 ```
 
 #### Alpine Linux
@@ -139,10 +149,10 @@ bash install-opensuse.sh -u
 ```bash
 git clone https://github.com/dwilliam62/bugsvim ~/.config/bugsvim
 cd ~/.config/bugsvim
-bash install-alpine.sh
+bash installers/install-alpine.sh
 
 # O actualizar instalación existente
-bash install-alpine.sh -u
+bash installers/install-alpine.sh -u
 ```
 
 #### Bazzite (Fedora Atomic)
@@ -150,23 +160,23 @@ bash install-alpine.sh -u
 ```bash
 git clone https://github.com/dwilliam62/bugsvim ~/.config/bugsvim
 cd ~/.config/bugsvim
-bash install-bazzite.sh
+bash installers/install-bazzite.sh
 
 # O actualizar instalación existente
-bash install-bazzite.sh -u
+bash installers/install-bazzite.sh -u
 ```
 
 #### FreeBSD / OpenBSD / NetBSD
 
 ```bash
 # FreeBSD
-bash install-freebsd.sh
+bash installers/install-freebsd.sh
 
 # OpenBSD
-bash install-openbsd.sh
+bash installers/install-openbsd.sh
 
 # NetBSD
-bash install-netbsd.sh
+bash installers/install-netbsd.sh
 ```
 
 #### Windows (PowerShell)
@@ -181,6 +191,7 @@ Set-Location $env:LOCALAPPDATA\bugsvim
 
 - **Instalación Completa**: Detecta tu distribución, respalda configuraciones existentes de NeoVim, instala paquetes del sistema y LSPs requeridos, configura npm a nivel de usuario, verifica la instalación y copia la configuración a `~/.config/nvim`.
 - **Modo de Actualización Modular (`-u` / `--update`)**: Comprueba e instala `tree-sitter-cli`, elimina cachés antiguas de `nvim-treesitter` y sincroniza la configuración más reciente.
+- **Modo de Actualización de Configuración (`-c` / `--update-config`)**: Hace `git pull`, respalda `~/.config/nvim`, lo resincroniza desde el repo (eliminando archivos que ya no existen) y ejecuta `:Lazy sync` para instalar los plugins nuevos.
 
 Consulta [INSTALL.es.md](./INSTALL.es.md) e [INSTALL-SCRIPTS.es.md](./INSTALL-SCRIPTS.es.md) para más detalles.
 

@@ -8,14 +8,14 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$SCRIPT_DIR"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Source shared library
-if [ -f "${SCRIPT_DIR}/lib/common.sh" ]; then
+if [ -f "${REPO_ROOT}/lib/common.sh" ]; then
   # shellcheck disable=SC1091
-  source "${SCRIPT_DIR}/lib/common.sh"
+  source "${REPO_ROOT}/lib/common.sh"
 else
-  echo "Error: Cannot find '${SCRIPT_DIR}/lib/common.sh'." >&2
+  echo "Error: Cannot find '${REPO_ROOT}/lib/common.sh'." >&2
   exit 1
 fi
 
@@ -328,6 +328,11 @@ main() {
     exit 0
   fi
 
+  if [ "$CONFIG_UPDATE" -eq 1 ]; then
+    update_config_from_repo
+    exit 0
+  fi
+
   echo -e "${BLUE}╔════════════════════════════════════════════════════════════════╗${NC}"
   echo -e "${BLUE}║   bugsvim - Bazzite Installation                               ║${NC}"
   echo -e "${BLUE}╚════════════════════════════════════════════════════════════════╝${NC}"
@@ -343,6 +348,9 @@ main() {
 
   echo ""
   sync_neovim_config
+
+  echo ""
+  ensure_org_directory
 
   echo ""
   configure_shell_path

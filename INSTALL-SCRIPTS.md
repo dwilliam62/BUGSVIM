@@ -35,109 +35,109 @@ You can also run any distribution script directly:
 ### Arch Linux & Derivatives (EndeavourOS, Manjaro, CachyOS, Garuda)
 ```bash
 # Fresh install
-bash install-arch.sh
+bash installers/install-arch.sh
 
 # Update existing install
-bash install-arch.sh -u
+bash installers/install-arch.sh -u
 
 # Check and install missing dependencies
-bash install-arch.sh -d
+bash installers/install-arch.sh -d
 ```
 
 ### Debian, Ubuntu & Derivatives (Linux Mint, Pop!_OS, Zorin OS, Elementary)
 ```bash
 # Fresh install
-bash install-debian.sh
+bash installers/install-debian.sh
 
 # Update existing install
-bash install-debian.sh -u
+bash installers/install-debian.sh -u
 
 # Check and install missing dependencies
-bash install-debian.sh -d
+bash installers/install-debian.sh -d
 ```
 
 ### Fedora & Derivatives (Nobara, RHEL, CentOS Stream, AlmaLinux, Rocky)
 ```bash
 # Fresh install
-bash install-fedora.sh
+bash installers/install-fedora.sh
 
 # Update existing install
-bash install-fedora.sh -u
+bash installers/install-fedora.sh -u
 
 # Check and install missing dependencies
-bash install-fedora.sh -d
+bash installers/install-fedora.sh -d
 ```
 
 ### openSUSE (Tumbleweed / Leap)
 ```bash
 # Fresh install
-bash install-opensuse.sh
+bash installers/install-opensuse.sh
 
 # Update existing install
-bash install-opensuse.sh -u
+bash installers/install-opensuse.sh -u
 
 # Check and install missing dependencies
-bash install-opensuse.sh -d
+bash installers/install-opensuse.sh -d
 ```
 
 ### Gentoo Linux
 ```bash
 # Fresh install
-bash install-gentoo.sh
+bash installers/install-gentoo.sh
 
 # Update existing install
-bash install-gentoo.sh -u
+bash installers/install-gentoo.sh -u
 
 # Check and install missing dependencies
-bash install-gentoo.sh -d
+bash installers/install-gentoo.sh -d
 ```
 
 ### Alpine Linux
 ```bash
 # Fresh install
-bash install-alpine.sh
+bash installers/install-alpine.sh
 
 # Update existing install
-bash install-alpine.sh -u
+bash installers/install-alpine.sh -u
 
 # Check and install missing dependencies
-bash install-alpine.sh -d
+bash installers/install-alpine.sh -d
 ```
 
 ### Bazzite (Fedora Atomic / Universal Blue)
 ```bash
 # Fresh install
-bash install-bazzite.sh
+bash installers/install-bazzite.sh
 
 # Update existing install
-bash install-bazzite.sh -u
+bash installers/install-bazzite.sh -u
 
 # Check and install missing dependencies
-bash install-bazzite.sh -d
+bash installers/install-bazzite.sh -d
 ```
 
 ### FreeBSD
 ```bash
-bash install-freebsd.sh
+bash installers/install-freebsd.sh
 
 # Check and install missing dependencies
-bash install-freebsd.sh -d
+bash installers/install-freebsd.sh -d
 ```
 
 ### OpenBSD
 ```bash
-bash install-openbsd.sh
+bash installers/install-openbsd.sh
 
 # Check and install missing dependencies
-bash install-openbsd.sh -d
+bash installers/install-openbsd.sh -d
 ```
 
 ### NetBSD
 ```bash
-bash install-netbsd.sh
+bash installers/install-netbsd.sh
 
 # Check and install missing dependencies
-bash install-netbsd.sh -d
+bash installers/install-netbsd.sh -d
 ```
 
 ### Windows (PowerShell)
@@ -165,27 +165,31 @@ The installation system is built around a DRY, modular shared library:
 ├── install.sh                # Unified dispatcher with OS auto-detection & flag routing
 ├── lib/
 │   └── common.sh             # Sourced library: CLI parser, backup, npm manager, updates, verification
-├── install-arch.sh           # Arch driver (sources lib/common.sh)
-├── install-debian.sh         # Debian/Ubuntu driver (sources lib/common.sh)
-├── install-fedora.sh         # Fedora driver (sources lib/common.sh)
-├── install-opensuse.sh       # openSUSE driver (sources lib/common.sh)
-├── install-gentoo.sh         # Gentoo driver (sources lib/common.sh)
-├── install-alpine.sh         # Alpine driver (sources lib/common.sh)
-├── install-bazzite.sh        # Bazzite driver (sources lib/common.sh)
-├── install-freebsd.sh        # FreeBSD driver (sources lib/common.sh)
-├── install-netbsd.sh         # NetBSD driver (sources lib/common.sh)
-├── install-openbsd.sh        # OpenBSD driver (sources lib/common.sh)
-└── install-windows.ps1       # Windows PowerShell installer
+├── installers/               # Per-distro drivers (each sources ../lib/common.sh)
+│   ├── install-arch.sh       # Arch driver
+│   ├── install-debian.sh     # Debian/Ubuntu driver
+│   ├── install-fedora.sh     # Fedora driver
+│   ├── install-opensuse.sh   # openSUSE driver
+│   ├── install-gentoo.sh     # Gentoo driver
+│   ├── install-alpine.sh     # Alpine driver
+│   ├── install-bazzite.sh    # Bazzite driver
+│   ├── install-freebsd.sh    # FreeBSD driver
+│   ├── install-netbsd.sh     # NetBSD driver
+│   └── install-openbsd.sh    # OpenBSD driver
+└── install-windows.ps1       # Windows PowerShell installer (standalone; install.sh does not handle Windows)
 ```
+
+`install.sh` is the only script at the repo root. It sets `SCRIPT_DIR` to its own directory, dispatches to `installers/install-<distro>.sh`, and each driver sets `REPO_ROOT` to the repo root (its parent directory) so `lib/common.sh` and the `nvim/` config are always found. Drivers can also be run directly from any working directory.
 
 ### Sourced Shared Library (`lib/common.sh`)
 Contains all shared logic:
-- **CLI Parsing**: Standardized `-f/--force`, `-u/--update`, `-d/--deps`, `-D/--distro`, `--debug`, `--list-distros`, `-h/--help`.
+- **CLI Parsing**: Standardized `-f/--force`, `-u/--update`, `-c/--update-config`, `-d/--deps`, `-D/--distro`, `--debug`, `--list-distros`, `-h/--help`.
 - **Pre-execution Scope Safety**: Uses `main "$@"` to ensure all functions are in scope before execution paths run.
 - **NPM Prefix Configuration**: Isolates global npm packages into `~/.npm-global` to prevent permission issues without `sudo npm`.
 - **Backup System**: Automated, timestamped backups of `~/.config/nvim`, `~/.local/share/nvim`, `~/.local/state/nvim`.
 - **Shell PATH Auto-Configuration**: Automatically appends `~/.npm-global/bin` and `~/.local/bin` to `.zshrc`, `.bashrc`, or `config.fish`.
 - **Verification & Reporting**: Comprehensive post-install checks and summary diagnostics.
+- **Org Notes Directory**: `ensure_org_directory` creates `~/org` (and `~/org/refile.org`) so the org.nvim plugin spec has somewhere to file notes; override the location with `ORG_DIRECTORY`.
 
 ---
 
@@ -194,12 +198,18 @@ Contains all shared logic:
 | Flag | Long Option | Description |
 |------|-------------|-------------|
 | `-f` | `--force` | Force rebuild/reinstall of optional and existing packages |
-| `-u` | `--update` | Run update tasks: cleans legacy Treesitter caches, verifies `tree-sitter-cli`, syncs `nvim/` |
+| `-u` | `--update` | Run update tasks: cleans legacy Treesitter caches, verifies `tree-sitter-cli`, syncs the local checkout's `nvim/` into `~/.config/nvim` |
+| `-c` | `--update-config` | Config update mode: `git pull --ff-only`, backs up and re-syncs `~/.config/nvim` from the repo (pruning files that no longer exist upstream), then runs `:Lazy sync` to install new plugins |
 | `-d` | `--deps` | Dependency mode: checks and installs missing system, npm, and python packages without modifying config |
 | `-D` | `--distro <name>` | Override distribution detection (e.g. `debian`, `arch`, `fedora`, `gentoo`) |
 | | `--list-distros` | Display supported distribution keys and matched derivatives |
 | | `--debug` | Enable verbose debug logging output |
 | `-h` | `--help` | Show command usage and options |
+
+### `-u` vs `-c`
+
+- **`-u` / `--update`** is the *environment* update: it verifies/installs `tree-sitter-cli`, clears legacy Treesitter caches, and copies the **local checkout's** `nvim/` tree over `~/.config/nvim`. It never fetches from git, and it never removes files deleted in the repo, so a removed plugin spec keeps loading.
+- **`-c` / `--update-config`** is the *config* update: it `git pull --ff-only`s the checkout, backs up `~/.config/nvim`, re-syncs it (pruning entries that no longer exist in the repo, dotfiles included), then runs `nvim --headless "+Lazy! sync" +qa` so newly added plugins are installed. Use this when the repo gained new plugins or dropped old ones.
 
 ---
 
@@ -235,6 +245,7 @@ Each script performs the following steps in order:
 9. **Install Python Packages** - pip packages (ruff, pyright)
 10. **Optional: Build hyprls** - Prompts to build Hyprland LSP from source (Debian/Fedora only)
 11. **Verify Installation** - Checks all components are installed and accessible
+12. **Create Org Directory** - Creates `~/org` and `~/org/refile.org` if missing, matching the org.nvim plugin's `org_directory` and `default_notes_file` opts (override with `ORG_DIRECTORY`)
 
 **Windows script notes (`install-windows.ps1`):**
 - Backs up `%LOCALAPPDATA%\nvim` and `%LOCALAPPDATA%\nvim-data`
@@ -244,7 +255,7 @@ Each script performs the following steps in order:
 
 ## Distro-Specific Notes
 
-### Arch Linux (`install-arch.sh`)
+### Arch Linux (`installers/install-arch.sh`)
 
 **Features:**
 
@@ -264,7 +275,7 @@ Each script performs the following steps in order:
 
 ---
 
-### Debian/Ubuntu (`install-debian.sh`)
+### Debian/Ubuntu (`installers/install-debian.sh`)
 
 **Features:**
 
@@ -292,7 +303,7 @@ Each script performs the following steps in order:
 
 ---
 
-### Fedora (`install-fedora.sh`)
+### Fedora (`installers/install-fedora.sh`)
 
 **Features:**
 
@@ -370,14 +381,14 @@ cp -r ~/neovim-backup-20251218-005700/.local-state-nvim ~/.local/state/nvim
 ### Run with auto-detection (recommended)
 
 ```bash
-bash install-arch.sh
+bash installers/install-arch.sh
 ```
 
 ### Run on non-native distro (with confirmation)
 
 ```bash
 # Run Debian script on Ubuntu - will ask for confirmation
-bash install-debian.sh
+bash installers/install-debian.sh
 ```
 
 ### Windows (PowerShell)
@@ -491,8 +502,8 @@ sudo dnf install nodejs npm
 Make the script executable:
 
 ```bash
-chmod +x install-arch.sh  # or install-debian.sh, install-fedora.sh
-bash install-arch.sh
+chmod +x installers/install-arch.sh  # or installers/install-debian.sh, installers/install-fedora.sh
+bash installers/install-arch.sh
 ```
 
 ## Advanced: Manual Installation
@@ -582,7 +593,7 @@ The scripts respect these environment variables if set:
 ```bash
 # Disable interactive prompts (for hyprls build on Debian/Fedora)
 # Set to "n" to skip hyprls, "y" to build
-INTERACTIVE=n bash install-debian.sh
+INTERACTIVE=n bash installers/install-debian.sh
 
 # Set a custom npm prefix (if using custom npm setup)
 # export NPM_CONFIG_PREFIX=~/.npm-global

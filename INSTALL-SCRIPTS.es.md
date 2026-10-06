@@ -35,100 +35,100 @@ También puedes ejecutar directamente el script de tu distribución:
 ### Arch Linux y Derivadas (EndeavourOS, Manjaro, CachyOS, Garuda)
 ```bash
 # Instalación limpia
-bash install-arch.sh
+bash installers/install-arch.sh
 
 # Actualizar instalación existente
-bash install-arch.sh -u
+bash installers/install-arch.sh -u
 
 # Comprobar e instalar dependencias faltantes
-bash install-arch.sh -d
+bash installers/install-arch.sh -d
 ```
 
 ### Debian, Ubuntu y Derivadas (Linux Mint, Pop!_OS, Zorin OS, Elementary)
 ```bash
 # Instalación limpia
-bash install-debian.sh
+bash installers/install-debian.sh
 
 # Actualizar instalación existente
-bash install-debian.sh -u
+bash installers/install-debian.sh -u
 
 # Comprobar e instalar dependencias faltantes
-bash install-debian.sh -d
+bash installers/install-debian.sh -d
 ```
 
 ### Fedora y Derivadas (Nobara, RHEL, CentOS Stream, AlmaLinux, Rocky)
 ```bash
 # Instalación limpia
-bash install-fedora.sh
+bash installers/install-fedora.sh
 
 # Actualizar instalación existente
-bash install-fedora.sh -u
+bash installers/install-fedora.sh -u
 
 # Comprobar e instalar dependencias faltantes
-bash install-fedora.sh -d
+bash installers/install-fedora.sh -d
 ```
 
 ### openSUSE (Tumbleweed / Leap)
 ```bash
 # Instalación limpia
-bash install-opensuse.sh
+bash installers/install-opensuse.sh
 
 # Actualizar instalación existente
-bash install-opensuse.sh -u
+bash installers/install-opensuse.sh -u
 
 # Comprobar e instalar dependencias faltantes
-bash install-opensuse.sh -d
+bash installers/install-opensuse.sh -d
 ```
 
 ### Gentoo Linux
 ```bash
 # Instalación limpia
-bash install-gentoo.sh
+bash installers/install-gentoo.sh
 
 # Actualizar instalación existente
-bash install-gentoo.sh -u
+bash installers/install-gentoo.sh -u
 
 # Comprobar e instalar dependencias faltantes
-bash install-gentoo.sh -d
+bash installers/install-gentoo.sh -d
 ```
 
 ### Alpine Linux
 ```bash
 # Instalación limpia
-bash install-alpine.sh
+bash installers/install-alpine.sh
 
 # Actualizar instalación existente
-bash install-alpine.sh -u
+bash installers/install-alpine.sh -u
 
 # Comprobar e instalar dependencias faltantes
-bash install-alpine.sh -d
+bash installers/install-alpine.sh -d
 ```
 
 ### Bazzite (Fedora Atomic / Universal Blue)
 ```bash
 # Instalación limpia
-bash install-bazzite.sh
+bash installers/install-bazzite.sh
 
 # Actualizar instalación existente
-bash install-bazzite.sh -u
+bash installers/install-bazzite.sh -u
 
 # Comprobar e instalar dependencias faltantes
-bash install-bazzite.sh -d
+bash installers/install-bazzite.sh -d
 ```
 
 ### FreeBSD / OpenBSD / NetBSD
 ```bash
 # FreeBSD
-bash install-freebsd.sh
-bash install-freebsd.sh -d
+bash installers/install-freebsd.sh
+bash installers/install-freebsd.sh -d
 
 # OpenBSD
-bash install-openbsd.sh
-bash install-openbsd.sh -d
+bash installers/install-openbsd.sh
+bash installers/install-openbsd.sh -d
 
 # NetBSD
-bash install-netbsd.sh
-bash install-netbsd.sh -d
+bash installers/install-netbsd.sh
+bash installers/install-netbsd.sh -d
 ```
 
 ### Windows (PowerShell)
@@ -153,7 +153,8 @@ bash install-netbsd.sh -d
 | Opción Corta | Opción Larga | Descripción |
 |--------------|--------------|-------------|
 | `-f` | `--force` | Fuerza la reinstalación/reconstrucción de paquetes |
-| `-u` | `--update` | Ejecuta actualización: limpia caché de Treesitter, verifica `tree-sitter-cli`, sincroniza `nvim/` |
+| `-u` | `--update` | Ejecuta actualización: limpia caché de Treesitter, verifica `tree-sitter-cli`, sincroniza `nvim/` del checkout local en `~/.config/nvim` |
+| `-c` | `--update-config` | Modo actualización de config: `git pull --ff-only`, respalda y resincroniza `~/.config/nvim` desde el repo (eliminando archivos que ya no existen), y ejecuta `:Lazy sync` para instalar plugins nuevos |
 | `-d` | `--deps` | Modo dependencias: comprueba e instala paquetes faltantes sin modificar la config |
 | `-D` | `--distro <nombre>` | Sobrescribe la autodetección del sistema (ej. `debian`, `arch`, `fedora`, `gentoo`) |
 | | `--list-distros` | Muestra la lista de distribuciones reconocidas y sus alias |
@@ -187,7 +188,7 @@ Cada script ejecuta los siguientes pasos en orden:
 
 ## Notas Específicas por Distribución
 
-### Arch Linux (`install-arch.sh`)
+### Arch Linux (`installers/install-arch.sh`)
 
 **Características:**
 - Soporta asistentes de AUR tanto `yay` como `paru`.
@@ -199,7 +200,7 @@ Cada script ejecuta los siguientes pasos en orden:
 
 ---
 
-### Debian/Ubuntu (`install-debian.sh`)
+### Debian/Ubuntu (`installers/install-debian.sh`)
 
 **Características:**
 - Opción interactiva para compilar hyprls desde el código fuente.
@@ -207,7 +208,7 @@ Cada script ejecuta los siguientes pasos en orden:
 
 ---
 
-### Fedora (`install-fedora.sh`)
+### Fedora (`installers/install-fedora.sh`)
 
 **Características:**
 - Utiliza el gestor de paquetes `dnf`.
@@ -219,7 +220,7 @@ Cada script ejecuta los siguientes pasos en orden:
 
 ---
 
-### Gentoo Linux (`install-gentoo.sh`)
+### Gentoo Linux (`installers/install-gentoo.sh`)
 
 **Características:**
 - Compatible con NeoVim 0.10, 0.11 y 0.12+.

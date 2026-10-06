@@ -5,6 +5,25 @@
 
 ---
 
+# 🚧 **Unreleased**
+
+#### 📅 **Updated: Oct, 2026**
+
+- Installers reorganized: the per-distro drivers moved from the repo root into `installers/`, leaving `install.sh` as the single root entry point
+  - `install.sh` now dispatches to `installers/install-<distro>.sh`
+  - each driver sets `REPO_ROOT` to its parent directory, so `lib/common.sh` and `nvim/` resolve no matter what the current directory is
+  - drivers still work when invoked directly, e.g. `bash installers/install-arch.sh -u`
+  - `install-windows.ps1` stays at the root: it is standalone, and `install.sh` does not detect or handle Windows
+  - docs updated: `README(.es).md`, `INSTALL(.es).md`, `INSTALL-SCRIPTS(.es).md`, `PACKAGES.txt`, `WARP.md`
+- New `ensure_org_directory` helper in `lib/common.sh`, called by every distro installer's full-install path
+  - creates `~/org` and `~/org/refile.org` to match the org.nvim plugin spec (`org_directory`, `agenda_files`, `default_notes_file`)
+  - override the location with `ORG_DIRECTORY`
+- New `-c` / `--update-config` mode for updating the NeoVim config itself, including new plugins
+  - `-u` only re-synced the local checkout: it never fetched upstream and never removed files deleted in the repo, so a removed plugin spec kept loading out of `~/.config/nvim`
+  - `-c` runs `git pull --ff-only`, backs up `~/.config/nvim` (once per run), re-syncs with pruning of entries that no longer exist in the repo, then runs `nvim --headless "+Lazy! sync" +qa` so new plugins are installed
+  - `sync_neovim_config` now copies dotfiles too: `cp -r nvim/*` never matched `.luacheckrc`, `.luarc.json` or `.stylua.toml`, so those had never reached `~/.config/nvim`
+- Added `nvim/lua/plugins/org.lua` (org.nvim), committed disabled with its insert-mode mappings turned off so blink.cmp's `<Tab>`/`<S-Tab>`/`<CR>` keep working in `.org` buffers
+
 # 🚀 **Current Release - v1.0.6**
 
 #### 📅 **Updated: Sept, 2026**

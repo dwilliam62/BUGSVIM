@@ -1,32 +1,44 @@
 #!/usr/bin/env bash
 # ================================================================================================
-# bugsvim - Installation Script for NetBSD
+# bugsvim - Installation Script for OpenBSD
 # ================================================================================================
-# This script installs all dependencies and language servers for bugsvim on NetBSD
+# This script installs all dependencies and language servers for bugsvim on OpenBSD
 # ================================================================================================
 
 set -euo pipefail
 
-# Ensure standard NetBSD package and local binary directories are in PATH
-export PATH="/usr/local/bin:/usr/pkg/bin:${PATH}"
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$SCRIPT_DIR"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Source shared library
-if [ -f "${SCRIPT_DIR}/lib/common.sh" ]; then
+if [ -f "${REPO_ROOT}/lib/common.sh" ]; then
   # shellcheck disable=SC1091
-  source "${SCRIPT_DIR}/lib/common.sh"
+  source "${REPO_ROOT}/lib/common.sh"
 else
-  echo "Error: Cannot find '${SCRIPT_DIR}/lib/common.sh'." >&2
+  echo "Error: Cannot find '${REPO_ROOT}/lib/common.sh'." >&2
   exit 1
 fi
+
+# OpenBSD ships version-suffixed luarocks binaries (luarocks-5.4), while the
+# rest of the tooling expects a plain 'luarocks' on PATH.
+setup_openbsd_symlinks() {
+  if ! command -v luarocks &>/dev/null; then
+    local lr_bin
+    lr_bin="$(ls /usr/local/bin/luarocks-[0-9]* 2>/dev/null | sort -V | tail -n 1 || true)"
+    if [ -n "$lr_bin" ] && [ -x "$lr_bin" ]; then
+      log_info "Creating symlink for luarocks -> $lr_bin..."
+      mkdir -p "$HOME/.local/bin"
+      run_as_root ln -sf "$lr_bin" /usr/local/bin/luarocks || ln -sf "$lr_bin" "$HOME/.local/bin/luarocks" || true
+      export PATH="${HOME}/.local/bin:$PATH"
+    fi
+  fi
+}
 
 ensure_neovim_supported() {
   log_info "Checking NeoVim version..."
   if ! command -v nvim &>/dev/null; then
-    log_info "NeoVim is not installed. Installing via pkgin..."
-    run_as_root pkgin -y in neovim || true
+    log_info "NeoVim is not installed. Installing via pkg_add..."
+    run_as_root pkg_add neovim || true
   fi
 
   local nvim_version
@@ -40,107 +52,54 @@ ensure_neovim_supported() {
   read -r major minor patch <<<"$(parse_nvim_semver "$nvim_version")"
   if [ "$major" -lt 10 ]; then
     log_error "✗ NeoVim 0.10+ is required, but found: $nvim_version"
-    log_warn "Please upgrade NeoVim: doas pkgin in neovim"
+    log_warn "Please upgrade NeoVim: doas pkg_add -u neovim"
     exit 1
   fi
   log_success "✓ NeoVim version: $nvim_version (supported)"
 }
 
-setup_netbsd_symlinks() {
-  log_info "Setting up NetBSD command symlinks in /usr/local/bin..."
-  run_as_root mkdir -p /usr/local/bin
-
-  # python3
-  if ! command -v python3 &>/dev/null; then
-    local py_bin
-    py_bin="$(ls /usr/pkg/bin/python3.* 2>/dev/null | sort -V | tail -n 1 || true)"
-    if [ -n "$py_bin" ] && [ -x "$py_bin" ]; then
-      log_info "Creating symlink for python3 -> $py_bin..."
-      run_as_root ln -sf "$py_bin" /usr/local/bin/python3 || true
-    fi
-  fi
-
-  # pip / pip3
-  if ! command -v pip3 &>/dev/null || ! command -v pip &>/dev/null; then
-    local pip_bin
-    pip_bin="$(ls /usr/pkg/bin/pip-* 2>/dev/null | sort -V | tail -n 1 || true)"
-    if [ -n "$pip_bin" ] && [ -x "$pip_bin" ]; then
-      log_info "Creating symlink for pip/pip3 -> $pip_bin..."
-      run_as_root ln -sf "$pip_bin" /usr/local/bin/pip3 || true
-      run_as_root ln -sf "$pip_bin" /usr/local/bin/pip || true
-    fi
-  fi
-
-  # luarocks
-  if ! command -v luarocks &>/dev/null; then
-    local lr_bin
-    lr_bin="$(ls /usr/pkg/bin/luarocks-* 2>/dev/null | sort -V | tail -n 1 || true)"
-    if [ -n "$lr_bin" ] && [ -x "$lr_bin" ]; then
-      log_info "Creating symlink for luarocks -> $lr_bin..."
-      run_as_root ln -sf "$lr_bin" /usr/local/bin/luarocks || true
-    fi
-  fi
-
-  # luacheck: prefer luacheck-5.1 if available, else luacheck-5.4
-  if ! command -v luacheck &>/dev/null; then
-    local lc_bin=""
-    if [ -x "/usr/pkg/bin/luacheck-5.1" ]; then
-      lc_bin="/usr/pkg/bin/luacheck-5.1"
-    elif [ -x "/usr/pkg/bin/luacheck-5.4" ]; then
-      lc_bin="/usr/pkg/bin/luacheck-5.4"
-    fi
-    if [ -n "$lc_bin" ]; then
-      log_info "Creating symlink for luacheck -> $lc_bin..."
-      run_as_root ln -sf "$lc_bin" /usr/local/bin/luacheck || true
-    fi
-  fi
-}
-
 check_and_install_deps() {
   echo -e "${BLUE}╔════════════════════════════════════════════════════════════════╗${NC}"
-  echo -e "${BLUE}║   bugsvim - Checking and Installing Dependencies (NetBSD)      ║${NC}"
+  echo -e "${BLUE}║   bugsvim - Checking and Installing Dependencies (OpenBSD)     ║${NC}"
   echo -e "${BLUE}╚════════════════════════════════════════════════════════════════╝${NC}"
   echo ""
 
-  log_info "Updating NetBSD packages via pkgin..."
-  run_as_root pkgin -y update || true
+  log_info "Updating OpenBSD packages..."
+  run_as_root pkg_add -u || true
 
-  local netbsd_pkgs=(
+  # NOTE: OpenBSD packages no pkgconf, npm (the node package provides npm) or
+  # lazygit; the Lua rocks build is the luarocks-lua54 subpackage, and clangd /
+  # clang-format live in clang-tools-extra rather than llvm.
+  local openbsd_pkgs=(
     git
     ripgrep
-    fd-find
+    fd
     curl
     jq
     gmake
-    tree-sitter-cli
-    lua54
-    lua54-rocks
-    lua51-check
-    python313
-    py313-pip
-    nodejs
+    tree-sitter
+    lua
+    luarocks-lua54
+    lua-language-server
+    python%3
+    py3-pip
+    node
     llvm
-    clang
+    clang-tools-extra
     bash
     shfmt
     stylua
-    lazygit
     bat
     xclip
-    rust-bin
   )
 
-  # pkgin refuses the whole install when one package is unknown, so a single
-  # unavailable name used to skip the whole list.
-  log_info "Installing NetBSD packages via pkgin..."
-  install_packages_resilient "run_as_root pkgin -y in" "${netbsd_pkgs[@]}" || true
+  # pkg_add reports the packages it could not find instead of failing the whole
+  # run, but keep the same retry/report behaviour for consistency.
+  log_info "Installing OpenBSD packages via pkg_add..."
+  install_packages_resilient "run_as_root pkg_add" "${openbsd_pkgs[@]}" || true
+  install_packages_resilient "run_as_root pkg_add" luacheck || true
 
-  # Ensure pkgconf or pkg-config is available
-  if ! command -v pkg-config &>/dev/null && ! command -v pkgconf &>/dev/null; then
-    run_as_root pkgin -y in pkgconf 2>/dev/null || run_as_root pkgin -y in pkg-config 2>/dev/null || true
-  fi
-
-  setup_netbsd_symlinks
+  setup_openbsd_symlinks
 
   # Luacheck fallback via luarocks
   if ! command -v luacheck &>/dev/null && command -v luarocks &>/dev/null; then
@@ -148,16 +107,16 @@ check_and_install_deps() {
     run_as_root luarocks install luacheck 2>/dev/null || luarocks install --local luacheck 2>/dev/null || true
   fi
 
-  # Rust toolchain fallback
+  # Rust
   if ! command -v rustc &>/dev/null; then
     log_info "Installing Rust toolchain via rustup..."
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y || true
   fi
 
-  # Python packages. NetBSD marks its Python as externally managed and pip may
-  # only be reachable as a module. ruff has neither a pkgsrc package nor a wheel,
-  # so pip builds it from source, which fails on some hosts; install it
-  # separately so that failure cannot block pyright (pure Python).
+  # Python packages. OpenBSD marks its Python as externally managed, and ruff has
+  # no BSD package or wheel, so pip compiles it from source (slow, and it can
+  # fail on small VMs). Install them separately so a ruff build failure cannot
+  # block pyright, which is pure Python.
   if ! command -v pyright &>/dev/null && ! command -v pyright-langserver &>/dev/null; then
     log_info "Installing pyright via pip..."
     if python3 -m pip install --user --break-system-packages pyright 2>/dev/null ||
@@ -169,13 +128,13 @@ check_and_install_deps() {
     fi
   fi
   if ! command -v ruff &>/dev/null; then
-    log_info "Installing ruff via pip (builds from source; no pkgsrc package)..."
+    log_info "Installing ruff via pip (compiles from source on BSD)..."
     if python3 -m pip install --user --break-system-packages ruff 2>/dev/null ||
       pip3 install --user --break-system-packages ruff 2>/dev/null; then
       log_success "✓ ruff installed"
     else
       FAILED_PYTHON+=("ruff")
-      log_warn "Warning: ruff install failed (no wheel, source build failed)"
+      log_warn "Warning: ruff install failed (no BSD wheel, source build failed)"
     fi
   fi
 
@@ -207,7 +166,7 @@ main() {
   parse_common_args "$@"
 
   if [ "$UPDATE_ONLY" -eq 1 ]; then
-    run_update_tasks "NetBSD"
+    run_update_tasks "OpenBSD"
     exit 0
   fi
 
@@ -216,8 +175,13 @@ main() {
     exit 0
   fi
 
+  if [ "$CONFIG_UPDATE" -eq 1 ]; then
+    update_config_from_repo
+    exit 0
+  fi
+
   echo -e "${BLUE}╔════════════════════════════════════════════════════════════════╗${NC}"
-  echo -e "${BLUE}║   bugsvim - NetBSD Installation                                ║${NC}"
+  echo -e "${BLUE}║   bugsvim - OpenBSD Installation                               ║${NC}"
   echo -e "${BLUE}╚════════════════════════════════════════════════════════════════╝${NC}"
   echo ""
 
@@ -231,6 +195,9 @@ main() {
 
   echo ""
   sync_neovim_config
+
+  echo ""
+  ensure_org_directory
 
   echo ""
   configure_shell_path

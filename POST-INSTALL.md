@@ -2,6 +2,10 @@
 
 After running the installation script, follow these steps to ensure everything works correctly.
 
+## Org Notes Directory
+
+The installer creates `~/org` (and an empty `~/org/refile.org`) if they do not exist, matching the `org_directory`, `agenda_files` and `default_notes_file` options in the org.nvim plugin spec. The path is lowercase on purpose - `~/Org` is a different directory on case-sensitive filesystems. Set `ORG_DIRECTORY=/some/path` when running the installer to use another location, and keep the plugin opts in sync if you do.
+
 ## npm PATH Configuration
 
 The installation scripts configure npm to use `~/.npm-global` for user-level global packages to avoid permission issues, and install user-level binaries into `~/.local/bin`. **Both** directories need to be in your PATH - `~/.local/bin` is where `ruff`, `pyright`, `lua-language-server`, `hyprls`, the `fd` link (Debian/Ubuntu) and `tectonic` live.

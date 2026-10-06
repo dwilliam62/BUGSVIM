@@ -77,17 +77,27 @@ This configuration is forked from **[BUGSVIM](https://github.com/Abhra00/BUGSVIM
 
 ### Quick Install (Recommended)
 
-bugsvim provides automated installation and update scripts for major distributions:
+bugsvim provides automated installation and update scripts for major distributions.
+
+#### One command (auto-detects your distribution)
+
+```bash
+git clone https://github.com/dwilliam62/bugsvim ~/.config/bugsvim
+cd ~/.config/bugsvim
+bash install.sh
+```
+
+`install.sh` detects your OS/distro and dispatches to the matching driver in `installers/`. It is the intended entry point - the per-distro commands below are explicit fallbacks for when you want to pick the driver yourself.
 
 #### Arch Linux
 
 ```bash
 git clone https://github.com/dwilliam62/bugsvim ~/.config/bugsvim
 cd ~/.config/bugsvim
-bash install-arch.sh
+bash installers/install-arch.sh
 
 # Or update existing installation
-bash install-arch.sh -u
+bash installers/install-arch.sh -u
 ```
 
 #### Debian / Ubuntu
@@ -95,10 +105,10 @@ bash install-arch.sh -u
 ```bash
 git clone https://github.com/dwilliam62/bugsvim ~/.config/bugsvim
 cd ~/.config/bugsvim
-bash install-debian.sh
+bash installers/install-debian.sh
 
 # Or update existing installation
-bash install-debian.sh -u
+bash installers/install-debian.sh -u
 ```
 
 #### Fedora
@@ -106,10 +116,10 @@ bash install-debian.sh -u
 ```bash
 git clone https://github.com/dwilliam62/bugsvim ~/.config/bugsvim
 cd ~/.config/bugsvim
-bash install-fedora.sh
+bash installers/install-fedora.sh
 
 # Or update existing installation
-bash install-fedora.sh -u
+bash installers/install-fedora.sh -u
 ```
 
 #### Gentoo Linux
@@ -117,10 +127,10 @@ bash install-fedora.sh -u
 ```bash
 git clone https://github.com/dwilliam62/bugsvim ~/.config/bugsvim
 cd ~/.config/bugsvim
-bash install-gentoo.sh
+bash installers/install-gentoo.sh
 
 # Or update existing installation
-bash install-gentoo.sh -u
+bash installers/install-gentoo.sh -u
 ```
 
 #### OpenSUSE
@@ -128,10 +138,10 @@ bash install-gentoo.sh -u
 ```bash
 git clone https://github.com/dwilliam62/bugsvim ~/.config/bugsvim
 cd ~/.config/bugsvim
-bash install-opensuse.sh
+bash installers/install-opensuse.sh
 
 # Or update existing installation
-bash install-opensuse.sh -u
+bash installers/install-opensuse.sh -u
 ```
 
 #### Alpine Linux
@@ -139,10 +149,10 @@ bash install-opensuse.sh -u
 ```bash
 git clone https://github.com/dwilliam62/bugsvim ~/.config/bugsvim
 cd ~/.config/bugsvim
-bash install-alpine.sh
+bash installers/install-alpine.sh
 
 # Or update existing installation
-bash install-alpine.sh -u
+bash installers/install-alpine.sh -u
 ```
 
 #### Bazzite (Fedora Atomic)
@@ -150,23 +160,23 @@ bash install-alpine.sh -u
 ```bash
 git clone https://github.com/dwilliam62/bugsvim ~/.config/bugsvim
 cd ~/.config/bugsvim
-bash install-bazzite.sh
+bash installers/install-bazzite.sh
 
 # Or update existing installation
-bash install-bazzite.sh -u
+bash installers/install-bazzite.sh -u
 ```
 
 #### FreeBSD / OpenBSD / NetBSD
 
 ```bash
 # FreeBSD
-bash install-freebsd.sh
+bash installers/install-freebsd.sh
 
 # OpenBSD
-bash install-openbsd.sh
+bash installers/install-openbsd.sh
 
 # NetBSD
-bash install-netbsd.sh
+bash installers/install-netbsd.sh
 ```
 
 #### Windows (PowerShell)
@@ -181,6 +191,7 @@ Set-Location $env:LOCALAPPDATA\bugsvim
 
 - **Full Installation**: Detects distribution, backs up existing NeoVim configurations, installs required system packages/LSPs, configures user-level npm, verifies setup, and copies config to `~/.config/nvim`.
 - **Modular Update Mode (`-u` / `--update`)**: Checks/installs `tree-sitter-cli`, cleans legacy `nvim-treesitter` caches from older `master` checkouts, and synchronizes the latest configuration.
+- **Config Update Mode (`-c` / `--update-config`)**: Pulls the repo, backs up `~/.config/nvim`, re-syncs it from the repo (removing files that no longer exist upstream) and runs `:Lazy sync` so new plugins get installed.
 
 See [INSTALL.md](./INSTALL.md) and [INSTALL-SCRIPTS.md](./INSTALL-SCRIPTS.md) for detailed instructions.
 

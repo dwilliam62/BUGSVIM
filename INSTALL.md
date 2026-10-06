@@ -18,6 +18,9 @@ bash install.sh -d
 # Run update pipeline (sync config, check tree-sitter-cli, clean legacy caches)
 bash install.sh -u
 
+# Update the nvim config itself from the repo (new plugins, prune removed files)
+bash install.sh -c
+
 # Specify distro explicitly (e.g., on Zorin, Pop!_OS, or Linux Mint)
 bash install.sh --distro debian
 
@@ -25,7 +28,7 @@ bash install.sh --distro debian
 bash install.sh --list-distros
 ```
 
-Alternatively, invoke your distro-specific script directly:
+Alternatively, invoke a distro driver directly from `installers/` (for example `bash installers/install-debian.sh`):
 
 ### Windows (PowerShell)
 
@@ -58,7 +61,7 @@ These scripts will:
 
 ### One-liner (Core + Formatters)
 
-Debian/Ubuntu package neither `lua-language-server`, `bash-language-server`, `nil`, `alejandra`, `prettier` nor `stylua`, and `apt-get` aborts the whole install when one name is unavailable. Get those from npm/upstream instead — `install-debian.sh` does this automatically (including `lua-language-server` from its upstream release).
+Debian/Ubuntu package neither `lua-language-server`, `bash-language-server`, `nil`, `alejandra`, `prettier` nor `stylua`, and `apt-get` aborts the whole install when one name is unavailable. Get those from npm/upstream instead — `installers/install-debian.sh` does this automatically (including `lua-language-server` from its upstream release).
 
 ```bash
 sudo apt-get update && sudo apt-get install -y \

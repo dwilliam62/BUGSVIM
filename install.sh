@@ -155,7 +155,9 @@ main() {
     fi
   fi
 
-  local target_script="${SCRIPT_DIR}/install-${target_distro}.sh"
+  # Distribution drivers live in installers/; install.sh stays at the repo root
+  # as the single entry point so it is obvious which script to run.
+  local target_script="${SCRIPT_DIR}/installers/install-${target_distro}.sh"
 
   if [ "$target_distro" != "unknown" ] && [ -f "$target_script" ]; then
     log_debug "Dispatching to: $target_script with args: $*"

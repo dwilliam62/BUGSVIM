@@ -30,8 +30,13 @@ MISSING=0
 FORCE_REINSTALL=0
 UPDATE_ONLY=0
 DEPS_ONLY=0
+CONFIG_UPDATE=0
 DEBUG=0
 SPECIFIED_DISTRO=""
+
+# Set once a ~/.config/nvim backup has been taken this run (see
+# backup_config_dir_if_needed), so --update-config never backs up twice.
+BACKUP_DONE=0
 
 # Supported distribution map
 SUPPORTED_DISTROS=(
@@ -240,6 +245,7 @@ Usage: $script_name [options]
 Options:
   -f, --force           Force rebuild/reinstall of optional packages
   -u, --update          Run update tasks (check/install tree-sitter-cli, clean legacy caches, sync config)
+  -c, --update-config   Make ~/.config/nvim match the repo (git pull, prune stale files, install new plugins)
   -d, --deps            Check for all dependencies and install missing ones
   -D, --distro <name>   Override distribution detection (e.g. debian, arch, fedora, gentoo)
       --list-distros    List all supported distribution keys and derivatives
@@ -249,7 +255,8 @@ Options:
 Examples:
   ./install.sh                      # Auto-detects OS and runs full install
   ./install.sh --distro debian      # Run Debian/Ubuntu installer on derivative OS (e.g. Zorin)
-  ./install.sh -u                   # Run update pipeline
+  ./install.sh -u                   # Run update pipeline (deps, tree-sitter-cli, cache cleanup, config sync)
+  ./install.sh -c                   # Update the nvim config itself from the repo, including new plugins
   ./install.sh -d                   # Check and install missing dependencies
   ./install.sh --list-distros       # Show supported distributions
 EOF
@@ -265,6 +272,10 @@ parse_common_args() {
       ;;
     -u | --update)
       UPDATE_ONLY=1
+      shift
+      ;;
+    -c | --update-config)
+      CONFIG_UPDATE=1
       shift
       ;;
     -d | --deps)
@@ -631,6 +642,7 @@ install_doc_toolchain() {
 }
 
 sync_neovim_config() {
+  local prune="${1:-0}"
   log_info "Syncing bugsvim config to ~/.config/nvim..."
   local repo_root="${REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
   if [ ! -d "${repo_root}/nvim" ]; then
@@ -638,8 +650,135 @@ sync_neovim_config() {
     return 1
   fi
   mkdir -p "${HOME}/.config/nvim"
-  cp -r "${repo_root}/nvim/"* "${HOME}/.config/nvim/"
+
+  # Pruning makes ~/.config/nvim a mirror of the repo: anything that is not in
+  # nvim/ is removed, nested files included. A top-level-only prune would miss
+  # the case that matters - a plugin spec deleted upstream still loading from
+  # lua/plugins/ - because lua/ itself exists in the repo and was never
+  # recursed into. -depth visits children before parents, so a directory that no
+  # longer exists upstream is emptied and then removed. --update-config takes a
+  # backup before calling this with prune=1.
+  if [ "$prune" -eq 1 ]; then
+    local rel path
+    while IFS= read -r -d '' path; do
+      rel="${path#"${HOME}/.config/nvim/"}"
+      if [ ! -e "${repo_root}/nvim/${rel}" ]; then
+        log_debug "Pruning stale entry: ${rel}"
+        rm -rf "$path"
+      fi
+    done < <(find "${HOME}/.config/nvim" -mindepth 1 -depth -print0)
+  fi
+
+  # Copy each entry explicitly: 'cp -r nvim/*' does not match dotfiles, so
+  # .luacheckrc, .luarc.json and .stylua.toml never reached ~/.config/nvim.
+  local entry
+  for entry in "${repo_root}/nvim"/* "${repo_root}/nvim"/.[!.]*; do
+    [ -e "$entry" ] || continue
+    cp -r "$entry" "${HOME}/.config/nvim/"
+  done
   log_success "✓ bugsvim config updated in ~/.config/nvim"
+}
+
+# ================================================================================================
+# Config Update From Repo (--update-config)
+# ================================================================================================
+# `-u` re-syncs the local checkout, but it never fetches upstream and never
+# removes files deleted in the repo, so a removed plugin spec kept loading from
+# ~/.config/nvim. `-c` is the "make ~/.config/nvim match the repo" path: pull,
+# back up, prune, copy (dotfiles included), then install new plugins.
+update_config_from_repo() {
+  echo -e "${BLUE}╔════════════════════════════════════════════════════════════════╗${NC}"
+  echo -e "${BLUE}║   bugsvim - Updating the NeoVim config from the repo           ║${NC}"
+  echo -e "${BLUE}╚════════════════════════════════════════════════════════════════╝${NC}"
+  echo ""
+
+  local repo_root="${REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+
+  # 1. Sync the upstream version rather than whatever the local checkout holds.
+  if [ -d "${repo_root}/.git" ] && command -v git >/dev/null 2>&1; then
+    local branch
+    branch="$(git -C "$repo_root" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+    if [ -n "$branch" ] && [ "$branch" != "HEAD" ]; then
+      log_info "Pulling latest '${branch}' from origin..."
+      if git -C "$repo_root" pull --ff-only; then
+        log_success "✓ Repository up to date"
+      else
+        # --ff-only refuses to guess on a diverged branch or local commits, so
+        # leave the checkout alone rather than resetting work the user may want.
+        log_warn "⚠ 'git pull --ff-only' failed (local commits or diverged branch); syncing the current checkout"
+      fi
+    else
+      log_info "Detached HEAD: skipping 'git pull', syncing the current checkout"
+    fi
+  else
+    log_info "Not a git checkout: syncing the current files"
+  fi
+  echo ""
+
+  # 2. Back up ~/.config/nvim before pruning anything out of it.
+  backup_config_dir_if_needed
+  echo ""
+
+  # 3. Prune stale entries and copy the repo's nvim/ tree, dotfiles included.
+  sync_neovim_config 1
+  echo ""
+
+  # 4. Install newly added plugins so they are usable on the next launch.
+  if command -v nvim >/dev/null 2>&1; then
+    log_info "Running 'Lazy sync' to install new plugins (this can take a while)..."
+    local sync_log
+    sync_log="$(mktemp)"
+    if nvim --headless "+Lazy! sync" +qa >"$sync_log" 2>&1; then
+      log_success "✓ Plugins synced"
+    else
+      log_warn "⚠ 'Lazy sync' reported a problem; open nvim and run ':Lazy sync'"
+      tail -n 20 "$sync_log" | sed 's/^/    /' || true
+    fi
+    rm -f "$sync_log"
+  else
+    log_warn "⚠ nvim not found; run ':Lazy sync' manually once it is installed"
+  fi
+
+  echo ""
+  log_success "✓ Config update completed successfully!"
+  echo "Next steps: restart neovim, then run ':checkhealth' if something looks wrong."
+}
+
+# ================================================================================================
+# Org-mode notes directory
+# ================================================================================================
+# The org.nvim plugin spec points org_directory, agenda_files and
+# default_notes_file at ~/org, so create it during install: agenda, capture and
+# refile otherwise have nowhere to read or write on first use.
+#
+# Note: the path is lowercase 'org' and must match the plugin's opts exactly -
+# '~/Org' is a different directory on case-sensitive filesystems.
+# Override with ORG_DIRECTORY=/some/path.
+ensure_org_directory() {
+  local org_dir="${ORG_DIRECTORY:-${HOME}/org}"
+  local notes_file="${org_dir}/refile.org"
+  local display="${org_dir/#$HOME/~}"
+
+  if [ -d "$org_dir" ]; then
+    log_success "✓ Org directory already exists: ${display}"
+  else
+    log_info "Creating Org directory: ${display}..."
+    if ! mkdir -p "$org_dir"; then
+      log_warn "⚠ Could not create ${display}; org.nvim agenda/capture will have nowhere to work"
+      return 1
+    fi
+    log_success "✓ Created ${display}"
+  fi
+
+  # default_notes_file: org capture appends to it, so create an empty file.
+  if [ ! -f "$notes_file" ]; then
+    if : >"$notes_file" 2>/dev/null; then
+      log_debug "Created ${notes_file}"
+    else
+      log_warn "⚠ Could not create ${notes_file}"
+    fi
+  fi
+  return 0
 }
 
 run_update_tasks() {
@@ -661,6 +800,30 @@ run_update_tasks() {
 # ================================================================================================
 # Backup Existing NeoVim Configuration
 # ================================================================================================
+
+# Timestamped backup of ~/.config/nvim, taken at most once per run. The full
+# installer uses backup_neovim_config (backup + remove); --update-config only
+# needs the backup, because it prunes the directory in place.
+backup_config_dir_if_needed() {
+  if [ "${BACKUP_DONE:-0}" -eq 1 ]; then
+    log_debug "Config backup already taken this run"
+    return 0
+  fi
+  BACKUP_DONE=1
+
+  if [ ! -d "${HOME}/.config/nvim" ]; then
+    log_info "No existing ~/.config/nvim to back up"
+    return 0
+  fi
+
+  local timestamp backup_dir
+  timestamp=$(date +"%Y%m%d-%H%M%S")
+  backup_dir="${HOME}/.config/neovim-backup-${timestamp}"
+  mkdir -p "$backup_dir"
+  log_info "Backing up ~/.config/nvim before pruning..."
+  cp -r "${HOME}/.config/nvim" "${backup_dir}/.config-nvim"
+  log_success "✓ Backup created: ${backup_dir}/.config-nvim"
+}
 
 backup_neovim_config() {
   local timestamp
@@ -712,6 +875,9 @@ backup_neovim_config() {
   else
     log_success "✓ No existing NeoVim configuration found"
   fi
+
+  # Nothing left to back up for the rest of this run.
+  BACKUP_DONE=1
 }
 
 # ================================================================================================

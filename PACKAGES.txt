@@ -3,9 +3,9 @@
 ================================================================================
 
 For automated installation, use the provided scripts:
-  • Arch:          bash install-arch.sh
-  • Debian/Ubuntu: bash install-debian.sh
-  • Fedora:        bash install-fedora.sh
+  • Arch:          bash installers/install-arch.sh
+  • Debian/Ubuntu: bash installers/install-debian.sh
+  • Fedora:        bash installers/install-fedora.sh
 
 Or choose your distro below and copy-paste the command.
 
@@ -18,7 +18,7 @@ FULL INSTALLATION (All LSPs + Formatters):
 # NOTE: apt-get aborts the entire transaction when a single name is unavailable,
 # and Debian/Ubuntu package neither lua-language-server, bash-language-server,
 # nil, alejandra, prettier nor stylua. Get those from npm/upstream instead
-# (install-debian.sh does this automatically).
+# (installers/install-debian.sh does this automatically).
 sudo apt-get update && sudo apt-get install -y \
   neovim git ripgrep fd-find curl jq build-essential pkg-config \
   lua-check luarocks python3-pip nodejs npm clang clang-tools \
