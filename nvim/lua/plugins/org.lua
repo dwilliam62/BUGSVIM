@@ -4,22 +4,22 @@
 -- LINKS :
 --   > github : https://github.com/xheisenbugx/org.nvim
 -- ================================================================================================
--- Committed DISABLED on this branch on purpose.
+-- ENABLED for evaluation on the xorg-vim branch.
 --
+-- Keep in mind what turning this on does, which is why it stays off on ddubs:
 -- org.nvim runs `setup()` at startup (upstream sets lazy = false), so it installs
 -- global normal-mode keymaps even when no .org file is ever opened:
 --   <leader>oa agenda, <leader>oc capture, <leader>og goto heading,
 --   <leader>ols store link, <leader>oxj/oxo/oxq clock, and the Emacs keys
 --   <C-c>a / <C-c>c / <C-c>l (which make <C-c> a global prefix).
--- Inside .org buffers it also takes over <Tab>/<S-Tab>/<CR>/<S-CR> in insert mode,
--- plus a large set of buffer-local normal-mode keys.
+-- Inside .org buffers it also claims a large set of buffer-local normal-mode keys
+-- (fold cycling on <Tab>/<S-Tab>, <leader>o* commands, org text objects).
 --
--- Enabling it here would change current behaviour, so it is committed switched off
--- and evaluated on the xorg-vim branch instead.
+-- Requires Neovim 0.11+; on older versions it notifies and does nothing.
 return {
   'xheisenbugx/org.nvim',
   main = 'org',
-  enabled = false,
+  enabled = true,
   lazy = false, -- upstream default; heavy modules load on first use
   opts = {
     org_directory = '~/org',
