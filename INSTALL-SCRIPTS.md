@@ -262,9 +262,9 @@ Each script performs the following steps in order:
 - Supports both `yay` and `paru` AUR helpers
 - Automatically installs AUR packages if helper is found:
   - hyprls
-  - pyright
-  - alejandra-bin
-  - prettierd
+  - alejandra
+- Installs the AUR batch one package at a time when the batch fails, so a single unavailable name cannot block the rest
+- Installs `prettierd` from the upstream `@fsouza/prettierd` npm package rather than the out-of-date AUR PKGBUILD
 
 **Prerequisites:**
 

@@ -56,7 +56,10 @@ install_aur_packages() {
     aur_cmd="paru"
   fi
 
-  local aur_pkgs=(alejandra-bin prettierd)
+  # 'alejandra' (not 'alejandra-bin', which does not exist in the AUR).
+  # prettierd is deliberately absent: the upstream @fsouza/prettierd npm package
+  # is already installed just above and the AUR PKGBUILD is flagged out-of-date.
+  local aur_pkgs=(alejandra)
   if ! command -v hyprls >/dev/null 2>&1; then
     aur_pkgs+=(hyprls)
   fi
@@ -66,10 +69,21 @@ install_aur_packages() {
     local aur_args=(--noconfirm)
     [ "$FORCE_REINSTALL" -ne 1 ] && aur_args+=(--needed)
 
-    "$aur_cmd" -S "${aur_args[@]}" "${aur_pkgs[@]}" || {
-      FAILED_AUR+=("${aur_pkgs[@]}")
-      log_warn "Warning: Some AUR packages failed to install"
-    }
+    # Like pacman, yay/paru resolve every target before building, so one
+    # renamed or removed package aborts the whole transaction and nothing is
+    # installed. Install the batch, then retry one at a time so the resolvable
+    # names still land and only the genuinely unavailable ones are reported.
+    if ! "$aur_cmd" -S "${aur_args[@]}" "${aur_pkgs[@]}"; then
+      log_warn "⚠ AUR batch install failed; retrying packages individually..."
+      for pkg in "${aur_pkgs[@]}"; do
+        if "$aur_cmd" -S "${aur_args[@]}" "$pkg"; then
+          log_success "✓ $pkg"
+        else
+          log_warn "○ $pkg (failed)"
+          FAILED_AUR+=("$pkg")
+        fi
+      done
+    fi
   else
     log_warn "⚠ No AUR helper found (yay/paru). Optional AUR packages skipped: ${aur_pkgs[*]}"
     FAILED_AUR+=("${aur_pkgs[@]}")

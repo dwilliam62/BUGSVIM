@@ -92,7 +92,7 @@ sudo pacman -S --noconfirm \
   bash-language-server rustup stylua shfmt clang prettier \
   lazygit bat wl-clipboard && \
 npm install -g @fsouza/prettierd vscode-langservers-extracted && \
-yay -S --noconfirm hyprls pyright alejandra-bin prettierd
+yay -S --noconfirm hyprls pyright alejandra
 
 # nil (Nix LSP) is not in the Arch repos or the AUR: build it from source
 # https://github.com/oxalica/nil
@@ -165,7 +165,7 @@ Solution: Install via pip:
 Issue: "Arch: AUR packages missing"
 Solution: Install yay first:
   pacman -S yay
-  Then run: yay -S hyprls pyright alejandra-bin
+  Then run: yay -S hyprls pyright alejandra
 
 
 ================================================================================

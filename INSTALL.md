@@ -134,12 +134,12 @@ npm install -g @fsouza/prettierd vscode-langservers-extracted
 # AUR packages (requires yay/paru)
 if command -v yay &> /dev/null; then
   echo "Installing AUR packages..."
-  yay -S --noconfirm hyprls pyright alejandra-bin
+  yay -S --noconfirm hyprls pyright alejandra
 else
   echo "⚠ yay not found. Install manually:"
   echo "  - hyprls"
   echo "  - pyright"
-  echo "  - alejandra-bin"
+  echo "  - alejandra"
 fi
 
 # Optional: convenience tools
