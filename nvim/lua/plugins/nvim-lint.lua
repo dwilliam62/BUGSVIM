@@ -17,6 +17,8 @@ return {
       cpp = { 'cpplint' },
       rust = { 'clippy' },
       python = { 'ruff' },
+      -- Zig has no standalone linter; zls reports diagnostics instead.
+      go = { 'golangci-lint' },
     }
     lint.linters.luacheck.args = {
       '--globals',

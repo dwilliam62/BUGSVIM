@@ -23,6 +23,20 @@
   - `-c` runs `git pull --ff-only`, backs up `~/.config/nvim` (once per run), re-syncs with pruning of entries that no longer exist in the repo, then runs `nvim --headless "+Lazy! sync" +qa` so new plugins are installed
   - `sync_neovim_config` now copies dotfiles too: `cp -r nvim/*` never matched `.luacheckrc`, `.luarc.json` or `.stylua.toml`, so those had never reached `~/.config/nvim`
 - Added `nvim/lua/plugins/org.lua` (org.nvim), committed disabled with its insert-mode mappings turned off so blink.cmp's `<Tab>`/`<S-Tab>`/`<CR>` keep working in `.org` buffers
+- Added Go and Zig language support
+  - new `nvim/lua/servers/gopls.lua` and `nvim/lua/servers/zls.lua`, required and enabled in `nvim/lua/servers/init.lua`
+  - `gopls` also attaches to `gomod`, `gowork` and `gotmpl` buffers, with unimported completions, placeholders, inlay hints and the `unusedparams`/`unusedwrite` analyses
+  - `zls` covers `zig`/`zir` and keeps build-on-save and autofix off, so conform owns formatting and the two do not fight over the same buffer
+  - formatters: `goimports` with `gofmt` as the fallback for Go, `zigfmt` (`zig fmt`) for Zig
+  - linter: `golangci-lint` for Go (Zig has no standalone linter; zls reports diagnostics instead)
+  - `zig` added to the treesitter parser list (`go` was already there)
+  - new `install_go_zig_support` step in `lib/common.sh`, called by all ten distro installers and by `install-windows.ps1`; skip it with `INSTALL_GO_ZIG=n`
+    - builds `gopls`, `goimports` and `golangci-lint` with `go install` into `~/.local/bin`, trying the golangci-lint `/v2` module path first and falling back to v1
+    - installs `zig` and `zls` from the upstream release archives, resolving the current zig version from `ziglang.org/download/index.json` and the asset for the host from the `zigtools/zls` release
+    - reports what it cannot provide as optional instead of failing the run: the upstream tarballs are glibc-only, so Alpine uses its own `zig`/`zls` packages and musl hosts are skipped with a hint, and the Go programs are skipped when no Go toolchain is present
+  - installers gained the matching packages where they exist: `go gopls zig zls golangci-lint` on Arch, `golang gopls` on Fedora/openSUSE, `go zig zls` on Alpine, `dev-lang/go`/`dev-lang/zig` on Gentoo, `go`/`golang-go`/`golang` on the BSDs, Debian and Bazzite
+  - `verify_installation` now reports the Go/Zig toolchain in its own section, so a missing `gopls`/`zls` does not read as a broken core install
+  - docs updated: `PACKAGES.txt` and `POST-INSTALL.md` (English)
 
 # 🚀 **Current Release - v1.0.6**
 

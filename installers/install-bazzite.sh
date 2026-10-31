@@ -246,6 +246,7 @@ check_and_install_deps() {
       git ripgrep fd curl jq pkg-config tree-sitter \
       gcc make automake autoconf \
       lua luarocks python node llvm rust \
+      go zig zls \
       shfmt clang-format lazygit bat
   else
     log_info "Enabling COPR repositories..."
@@ -259,7 +260,7 @@ check_and_install_deps() {
       git ripgrep fd curl jq pkg-config tree-sitter-cli \
       gcc gcc-c++ make automake autoconf \
       lua luarocks lua-language-server python3-devel python3-pip nodejs npm \
-      clang clang-tools-extra rust shfmt lazygit bat wl-clipboard || true
+      clang clang-tools-extra rust golang shfmt lazygit bat wl-clipboard || true
 
     log_warn "⚠ rpm-ostree layers only become available after a reboot, so packages layered just now may still show as missing below."
     log_warn "  Reboot, then re-run 'bash install.sh -d' to verify."
@@ -300,6 +301,8 @@ check_and_install_deps() {
     neovim
 
   update_treesitter_cli
+
+  install_go_zig_support
 
   install_doc_toolchain
 

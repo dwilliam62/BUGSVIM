@@ -29,6 +29,7 @@ return {
         'toml',
         'json',
         'go',
+        'zig',
         'gitignore',
         'yaml',
         'make',

@@ -34,6 +34,9 @@ return {
     formatters_by_ft = {
       lua = { 'stylua' },
       python = { 'ruff_format' },
+      -- goimports also runs gofmt, so fall back to gofmt when it is absent.
+      go = { 'goimports', 'gofmt', stop_after_first = true },
+      zig = { 'zigfmt' },
       javascript = { 'prettierd', 'prettier', stop_after_first = true },
       javascriptreact = { 'prettierd', 'prettier', stop_after_first = true },
       typescript = { 'prettierd', 'prettier', stop_after_first = true },

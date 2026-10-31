@@ -104,6 +104,7 @@ check_and_install_deps() {
     clang
     bash-language-server
     stylua shfmt prettier pyright ruff wl-clipboard lazygit bat
+    go gopls zig zls golangci-lint
   )
 
   local missing_pacman=()
@@ -141,6 +142,8 @@ check_and_install_deps() {
   install_aur_packages
 
   update_treesitter_cli
+
+  install_go_zig_support
 
   install_doc_toolchain
 

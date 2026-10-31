@@ -88,6 +88,10 @@ if (-not (Test-Path $sourceConfig)) {
 $configDir = Join-Path $env:LOCALAPPDATA 'nvim'
 $dataDir = Join-Path $env:LOCALAPPDATA 'nvim-data'
 
+# Drop-in location for the Go/Zig tooling installed below, mirroring the
+# ~/.local/bin convention used by the Unix installers.
+$localBin = Join-Path $env:USERPROFILE '.local\bin'
+
 function Remove-LegacyTreesitter {
     Write-Info 'Checking for legacy nvim-treesitter cache...'
     $legacyTs = Join-Path $dataDir 'lazy\nvim-treesitter'
@@ -159,6 +163,116 @@ function Install-TreeSitterCli {
         $tsVer = (& tree-sitter --version 2>$null)
         Write-Ok "OK: tree-sitter CLI available: $tsVer"
     }
+}
+
+# ------------------------------------------------------------------------------------------------
+# Go & Zig language tooling (gopls, goimports, golangci-lint, zls)
+# ------------------------------------------------------------------------------------------------
+# servers/gopls.lua and servers/zls.lua need these on PATH. Zig itself is
+# installed through winget further down, Go comes from the winget list, and the
+# Go programs are built with 'go install' into %USERPROFILE%\.local\bin so they
+# can be upgraded later with a single 'go install'. zls has no dependable winget
+# package, so it comes from the upstream GitHub release.
+
+function Resolve-GoToolchain {
+    if (Test-Command 'go') { return }
+
+    # A Go install from this same run is not on the process PATH yet, so look
+    # where winget and the MSI put it, like the fd/tree-sitter fallbacks below.
+    $goCandidates = @()
+    $goCandidates += Get-ChildItem -Path "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\GoLang.Go*" -Recurse -Filter go.exe -ErrorAction SilentlyContinue |
+        Where-Object { $_.FullName -match '\\bin\\go\.exe$' } |
+        Select-Object -ExpandProperty FullName
+    $goCandidates += 'C:\Program Files\Go\bin\go.exe'
+    $goExe = $goCandidates | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+    if ($goExe) {
+        Add-ToPath (Split-Path -Parent $goExe)
+    }
+}
+
+function Install-GoTool($Module, $Binary) {
+    if (Test-Command $Binary) {
+        Write-Ok "OK: $Binary already available"
+        return
+    }
+    if (-not (Test-Command 'go')) {
+        Write-Warn "WARN: $Binary skipped (Go toolchain not found; run 'go install $Module')"
+        return
+    }
+    try {
+        New-Item -ItemType Directory -Path $localBin -Force | Out-Null
+        Write-Info "Installing $Binary via go install..."
+        $env:GOBIN = $localBin
+        go install $Module
+        Add-ToPath $localBin
+        if (Test-Command $Binary) {
+            Write-Ok "OK: $Binary installed to $localBin"
+        } else {
+            Write-Warn "WARN: $Binary not found after 'go install'"
+        }
+    } catch {
+        Write-Warn "WARN: Failed to install $Binary"
+    }
+}
+
+function Install-Zls {
+    if (Test-Command 'zls') {
+        Write-Ok 'OK: zls already available'
+        return
+    }
+
+    try {
+        Write-Info 'Installing zls from the upstream GitHub release...'
+        $release = Invoke-RestMethod -Uri 'https://api.github.com/repos/zigtools/zls/releases/latest' -UseBasicParsing
+        $arch = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'aarch64' } else { 'x86_64' }
+        $asset = $release.assets | Where-Object { $_.name -eq "zls-$arch-windows.zip" } | Select-Object -First 1
+        if (-not $asset) {
+            $asset = $release.assets | Where-Object { $_.name -match "^zls-.*$arch.*windows\.zip$" } | Select-Object -First 1
+        }
+        if (-not $asset) {
+            Write-Warn "WARN: No zls release asset found for $arch windows"
+            return
+        }
+
+        $dest = Join-Path $env:USERPROFILE (".local\zls-" + $release.tag_name)
+        New-Item -ItemType Directory -Path $dest -Force | Out-Null
+        $zip = Join-Path $env:TEMP 'zls-release.zip'
+        Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zip -UseBasicParsing
+        Expand-Archive -Path $zip -DestinationPath $dest -Force
+        Remove-Item $zip -Force -ErrorAction SilentlyContinue
+
+        $zlsExe = Get-ChildItem -Path $dest -Recurse -Filter zls.exe -ErrorAction SilentlyContinue |
+            Select-Object -First 1 -ExpandProperty FullName
+        if ($zlsExe) {
+            Add-ToPath (Split-Path -Parent $zlsExe)
+            Write-Ok "OK: zls installed to $(Split-Path -Parent $zlsExe)"
+        } else {
+            Write-Warn 'WARN: zls.exe not found in the downloaded archive'
+        }
+    } catch {
+        Write-Warn 'WARN: Failed to install zls'
+    }
+}
+
+function Install-GoZigToolchain {
+    Write-Info 'Checking Go and Zig language tooling...'
+    Resolve-GoToolchain
+
+    Install-GoTool 'golang.org/x/tools/gopls@latest' 'gopls'
+    Install-GoTool 'golang.org/x/tools/cmd/goimports@latest' 'goimports'
+    if (-not (Test-Command 'golangci-lint')) {
+        # golangci-lint v2 moved to a /v2 module path, so fall back to v1 if the
+        # versioned path is not resolvable.
+        Install-GoTool 'github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest' 'golangci-lint'
+        if (-not (Test-Command 'golangci-lint')) {
+            Install-GoTool 'github.com/golangci/golangci-lint/cmd/golangci-lint@latest' 'golangci-lint'
+        }
+    }
+
+    if (-not (Test-Command 'zig')) {
+        Write-Warn 'WARN: zig not found; the zig formatter and parser compilation stay unavailable'
+    }
+    Install-Zls
 }
 
 function Sync-NeoVimConfig {
@@ -248,7 +362,8 @@ function Install-AllDependencies {
             'OpenJS.NodeJS.LTS',
             'Python.Python.3.12',
             'LLVM.LLVM',
-            'LuaLS.lua-language-server'
+            'LuaLS.lua-language-server',
+            'GoLang.Go'
         )
 
         foreach ($pkg in $wingetPkgs) {
@@ -332,6 +447,9 @@ function Install-AllDependencies {
         Write-Warn 'WARN: Failed to install ruff/pyright'
     }
 
+    # Go and Zig language tooling for servers/gopls.lua and servers/zls.lua
+    Install-GoZigToolchain
+
     # Verify and install tree-sitter CLI fallback if needed
     Install-TreeSitterCli
 }
@@ -351,7 +469,8 @@ function Test-Installation {
         'git', 'rg', 'fd', 'jq', 'node', 'npm', 'python',
         'clangd', 'lua-language-server', 'pyright', 'ruff',
         'stylua', 'shfmt', 'clang-format', 'prettier', 'prettierd',
-        'gcc', 'make', 'zig', 'tree-sitter'
+        'gcc', 'make', 'zig', 'tree-sitter',
+        'go', 'gopls', 'goimports', 'golangci-lint', 'zls'
     )
     foreach ($cmd in $commands) {
         if (Test-Command $cmd) {

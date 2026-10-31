@@ -128,6 +128,7 @@ check_and_install_deps() {
     bat
     xclip
     rust-bin
+    go
   )
 
   # pkgin refuses the whole install when one package is unknown, so a single
@@ -188,6 +189,8 @@ check_and_install_deps() {
     neovim
 
   update_treesitter_cli
+
+  install_go_zig_support
 
   install_doc_toolchain
 

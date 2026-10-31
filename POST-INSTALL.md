@@ -219,6 +219,28 @@ but several distributions package something older (Debian trixie ships 0.22.6). 
 installer detects that and installs a newer build into `~/.local/bin` - downloading
 the upstream release binary on Linux, or building it with cargo elsewhere.
 
+### Go and Zig tooling (gopls, zls)
+
+The installer adds the Go and Zig tooling used by `servers/gopls.lua` and
+`servers/zls.lua`:
+
+```bash
+# Go programs - built with 'go install' into ~/.local/bin
+# (gopls needs the Go toolchain on PATH anyway)
+go install golang.org/x/tools/gopls@latest
+go install golang.org/x/tools/cmd/goimports@latest
+go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
+
+# Zig + zls - unpacked from the upstream release archives into ~/.local/bin
+# (ziglang.org/download and the zigtools/zls GitHub releases)
+```
+
+Those upstream zig/zls archives are glibc-only. On Alpine (musl) install the
+`zig` and `zls` packages instead, and on a host with no Go toolchain the Go
+programs are skipped - `gopls` needs `go` on PATH to resolve packages anyway.
+
+Skip this step with `INSTALL_GO_ZIG=n bash install.sh -d`.
+
 ## Frequently Asked Questions
 
 ### Q: Why use `~/.npm-global` instead of system npm?

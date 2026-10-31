@@ -219,6 +219,253 @@ EOF
 }
 
 # ================================================================================================
+# Go & Zig Language Support (gopls, goimports, golangci-lint, zig, zls)
+# ================================================================================================
+# The config ships servers/gopls.lua and servers/zls.lua, so the toolchain those
+# servers shell out to has to exist on the host:
+#   gopls, goimports, golangci-lint -> 'go install' (they are Go programs, and
+#                                      gopls needs the Go toolchain on PATH to
+#                                      resolve packages anyway)
+#   zig, zls                        -> upstream release tarballs, because neither
+#                                      is a Go program and distro coverage is
+#                                      uneven
+# Everything lands in ~/.local/bin, the same drop-in location used for hyprls and
+# shfmt. Nothing here is fatal: a missing piece is reported as optional (○),
+# because the upstream zig/zls tarballs are glibc-only and Go is not installed on
+# every host. Set INSTALL_GO_ZIG=n to skip the step entirely.
+
+GO_ZIG_LOCAL_BIN="${HOME}/.local/bin"
+
+# 'go install' into ~/.local/bin, mirroring the hyprls/shfmt builds.
+go_install_tool() {
+  local module="$1" binary="$2"
+
+  if command -v "$binary" >/dev/null 2>&1; then
+    log_success "✓ $binary already installed"
+    return 0
+  fi
+
+  if ! command -v go >/dev/null 2>&1; then
+    log_warn "○ $binary (Go toolchain not found; install it with 'go install ${module}')"
+    return 1
+  fi
+
+  mkdir -p "$GO_ZIG_LOCAL_BIN"
+  log_info "Installing $binary via go install..."
+  # pipefail (set at the top of this file) makes the pipeline status reflect
+  # 'go install' rather than tee, so a failed build is detected here.
+  if GOBIN="$GO_ZIG_LOCAL_BIN" go install "$module" 2>&1 | tee "/tmp/${binary}-build.log"; then
+    export PATH="${GO_ZIG_LOCAL_BIN}:$PATH"
+    log_success "✓ $binary installed to ${GO_ZIG_LOCAL_BIN}"
+    return 0
+  fi
+
+  log_warn "○ $binary (build failed, see /tmp/${binary}-build.log)"
+  log_warn "  Install manually: go install ${module}"
+  return 1
+}
+
+# The zig/zls release tarballs are linked against glibc, so on musl hosts (Alpine)
+# the distro packages are the only working source.
+libc_is_musl() {
+  [ "$(uname -s)" = "Linux" ] || return 1
+  [ -e /etc/alpine-release ] && return 0
+  ldd --version 2>&1 | grep -qi musl
+}
+
+# Maps the host to the platform key used by https://ziglang.org/download/index.json
+zig_platform_key() {
+  case "$(uname -s)/$(uname -m)" in
+  Linux/x86_64 | Linux/amd64) printf 'x86_64-linux\n' ;;
+  Linux/aarch64 | Linux/arm64) printf 'aarch64-linux\n' ;;
+  Darwin/x86_64) printf 'x86_64-macos\n' ;;
+  Darwin/arm64 | Darwin/aarch64) printf 'aarch64-macos\n' ;;
+  FreeBSD/x86_64) printf 'x86_64-freebsd\n' ;;
+  FreeBSD/aarch64) printf 'aarch64-freebsd\n' ;;
+  *) return 1 ;;
+  esac
+}
+
+# Prints '<version> <tarball-url>' for the newest stable zig release that has a
+# build for $1 (e.g. x86_64-linux), or nothing when the index cannot be read.
+zig_release_info() {
+  local platform="$1" index
+  index="$(curl -fsSL --max-time 30 https://ziglang.org/download/index.json 2>/dev/null || true)"
+  [ -n "$index" ] || return 1
+
+  if command -v python3 >/dev/null 2>&1; then
+    printf '%s' "$index" | python3 -c '
+import json, sys
+
+platform = sys.argv[1]
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    sys.exit(1)
+
+# index.json lists releases newest-first behind a "master" entry, so the first
+# stable entry that ships a tarball for this platform is the one to install.
+for version, info in data.items():
+    if version == "master" or not isinstance(info, dict):
+        continue
+    entry = info.get(platform)
+    if isinstance(entry, dict) and entry.get("tarball"):
+        print(version, entry["tarball"])
+        break
+' "$platform"
+  elif command -v jq >/dev/null 2>&1; then
+    printf '%s' "$index" | jq -r --arg p "$platform" '
+      to_entries
+      | map(select(.key != "master" and (.value[$p].tarball != null)))
+      | first
+      | if . == null then empty else "\(.key) \(.value[$p].tarball)" end'
+  else
+    return 1
+  fi
+}
+
+install_zig_from_release() {
+  if command -v zig >/dev/null 2>&1; then
+    log_success "✓ zig already installed ($(zig version 2>/dev/null || echo 'installed'))"
+    return 0
+  fi
+
+  if libc_is_musl; then
+    log_warn "○ zig (the upstream tarball is glibc-only; install 'zig' from your distro repository)"
+    return 1
+  fi
+
+  local platform
+  platform="$(zig_platform_key || true)"
+  if [ -z "$platform" ]; then
+    log_warn "○ zig (no upstream build for $(uname -s)/$(uname -m))"
+    return 1
+  fi
+
+  local info version url
+  info="$(zig_release_info "$platform" || true)"
+  version="${info%% *}"
+  url="${info#* }"
+  if [ -z "$version" ] || [ -z "$url" ] || [ "$url" = "$info" ]; then
+    log_warn "○ zig (could not resolve a release for ${platform})"
+    return 1
+  fi
+
+  local dest="${HOME}/.local/zig-${version}" tmp
+  tmp="$(mktemp -d)"
+  log_info "Installing zig ${version} (${platform}) to ${dest}..."
+  mkdir -p "$dest" "$GO_ZIG_LOCAL_BIN"
+  # Download first: GNU tar cannot sniff the compression of a piped archive.
+  if curl -fsSL --max-time 900 -o "${tmp}/zig.tar.xz" "$url" &&
+    tar -xf "${tmp}/zig.tar.xz" -C "$dest" --strip-components=1; then
+    ln -sf "${dest}/zig" "${GO_ZIG_LOCAL_BIN}/zig"
+    export PATH="${GO_ZIG_LOCAL_BIN}:$PATH"
+    rm -rf "$tmp"
+    log_success "✓ zig ${version} installed to ${GO_ZIG_LOCAL_BIN}/zig"
+    return 0
+  fi
+
+  rm -rf "$tmp"
+  log_warn "○ zig download failed: ${url}"
+  return 1
+}
+
+# Prints the browser_download_url of the zls release asset matching <arch>-<os>.
+zls_release_url() {
+  local arch="$1" os="$2" assets match
+  assets="$(curl -fsSL --max-time 30 https://api.github.com/repos/zigtools/zls/releases/latest 2>/dev/null |
+    sed -n 's/.*"browser_download_url":[[:space:]]*"\([^"]*\)".*/\1/p' || true)"
+  [ -n "$assets" ] || return 1
+
+  # Assets are named zls-<arch>-<os>.tar.xz; fall back to any asset mentioning
+  # both the architecture and the OS so an upstream rename does not silently
+  # drop the install.
+  match="$(printf '%s\n' "$assets" | grep -E "/zls-${arch}-${os}\.tar\.xz$" | head -n 1 || true)"
+  if [ -z "$match" ]; then
+    match="$(printf '%s\n' "$assets" | grep -E "/zls-.*${arch}.*${os}.*\.tar\.xz$" | head -n 1 || true)"
+  fi
+  [ -n "$match" ] || return 1
+  printf '%s\n' "$match"
+}
+
+install_zls_from_release() {
+  if command -v zls >/dev/null 2>&1; then
+    log_success "✓ zls already installed"
+    return 0
+  fi
+
+  if libc_is_musl; then
+    log_warn "○ zls (the upstream tarball is glibc-only; install 'zls' from your distro repository)"
+    return 1
+  fi
+
+  local arch os
+  case "$(uname -m)" in
+  x86_64 | amd64) arch=x86_64 ;;
+  aarch64 | arm64) arch=aarch64 ;;
+  *)
+    log_warn "○ zls (no upstream build for $(uname -m))"
+    return 1
+    ;;
+  esac
+  case "$(uname -s)" in
+  Linux) os=linux ;;
+  Darwin) os=macos ;;
+  FreeBSD) os=freebsd ;;
+  *)
+    log_warn "○ zls (no upstream build for $(uname -s))"
+    return 1
+    ;;
+  esac
+
+  local url tag dest tmp
+  url="$(zls_release_url "$arch" "$os" || true)"
+  if [ -z "$url" ]; then
+    log_warn "○ zls (could not find a ${arch}-${os} release asset)"
+    return 1
+  fi
+  tag="$(printf '%s\n' "$url" | sed -n 's#.*/download/\([^/]*\)/.*#\1#p')"
+  dest="${HOME}/.local/zls-${tag:-latest}"
+
+  tmp="$(mktemp -d)"
+  log_info "Installing zls ${tag:-latest} (${arch}-${os}) to ${dest}..."
+  mkdir -p "$dest" "$GO_ZIG_LOCAL_BIN"
+  if curl -fsSL --max-time 300 -o "${tmp}/zls.tar.xz" "$url" &&
+    tar -xf "${tmp}/zls.tar.xz" -C "$dest" && [ -x "${dest}/zls" ]; then
+    ln -sf "${dest}/zls" "${GO_ZIG_LOCAL_BIN}/zls"
+    export PATH="${GO_ZIG_LOCAL_BIN}:$PATH"
+    rm -rf "$tmp"
+    log_success "✓ zls ${tag:-latest} installed to ${GO_ZIG_LOCAL_BIN}/zls"
+    return 0
+  fi
+
+  rm -rf "$tmp"
+  log_warn "○ zls download failed: ${url}"
+  return 1
+}
+
+install_go_zig_support() {
+  if [ "${INSTALL_GO_ZIG:-y}" != "y" ]; then
+    log_info "Skipping Go/Zig toolchain (INSTALL_GO_ZIG=${INSTALL_GO_ZIG:-})"
+    return 0
+  fi
+
+  log_info "Checking Go toolchain (gopls, goimports, golangci-lint)..."
+  go_install_tool "golang.org/x/tools/gopls@latest" gopls || true
+  go_install_tool "golang.org/x/tools/cmd/goimports@latest" goimports || true
+  # golangci-lint v2 moved to a /v2 module path and 'go install' refuses the
+  # unversioned path for it, so try v2 first and fall back to the v1 path.
+  if ! command -v golangci-lint >/dev/null 2>&1; then
+    go_install_tool "github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest" golangci-lint ||
+      go_install_tool "github.com/golangci/golangci-lint/cmd/golangci-lint@latest" golangci-lint || true
+  fi
+
+  log_info "Checking Zig toolchain (zig, zls)..."
+  install_zig_from_release || true
+  install_zls_from_release || true
+}
+
+# ================================================================================================
 # CLI Argument Parsing & Help
 # ================================================================================================
 
@@ -908,7 +1155,8 @@ configure_shell_path() {
 
   # Check both locations separately: an older install may have added
   # ~/.npm-global/bin while ~/.local/bin (ruff, pyright, lua-language-server,
-  # hyprls, and the linked fd) is still missing from PATH.
+  # hyprls, gopls, goimports, golangci-lint, zig, zls, and the linked fd) is
+  # still missing from PATH.
   local need_npm=0
   local need_local=0
   if ! grep -q "npm-global" "$shell_config" 2>/dev/null; then
@@ -990,6 +1238,16 @@ verify_installation() {
       MISSING=1
       ;;
     esac
+  done
+
+  echo ""
+  echo "Checking Go and Zig toolchain (optional):"
+  for cmd in go gopls goimports golangci-lint zig zls; do
+    if command -v "$cmd" &>/dev/null; then
+      echo -e "  ${GREEN}✓${NC} $cmd"
+    else
+      echo -e "  ${YELLOW}○${NC} $cmd (not found; the matching LSP/formatter stays inactive)"
+    fi
   done
 
   echo ""

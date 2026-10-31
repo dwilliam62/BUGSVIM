@@ -91,6 +91,7 @@ check_and_install_deps() {
     stylua
     bat
     xclip
+    go
   )
 
   # pkg_add reports the packages it could not find instead of failing the whole
@@ -147,6 +148,8 @@ check_and_install_deps() {
     neovim
 
   update_treesitter_cli
+
+  install_go_zig_support
 
   install_doc_toolchain
 

@@ -54,7 +54,7 @@ sudo dnf copr enable -y vgaetera/extras
 sudo dnf update -y && sudo dnf install -y \
   neovim git ripgrep fd curl @development-tools pkg-config \
   lua luarocks lua-language-server python3-devel python3-pip nodejs npm clang \
-  clang-tools-extra rust golang stylua shfmt lazygit bat wl-clipboard && \
+  clang-tools-extra rust golang gopls stylua shfmt lazygit bat wl-clipboard && \
 sudo luarocks install luacheck && \
 npm install -g bash-language-server @fsouza/prettierd vscode-langservers-extracted && \
 pip3 install --user ruff pyright
@@ -76,6 +76,7 @@ sudo pacman -S --noconfirm \
   neovim git ripgrep fd curl base-devel pkg-config \
   lua-language-server luacheck luarocks python nodejs npm clang \
   bash-language-server rustup stylua shfmt clang prettier \
+  go gopls zig zls golangci-lint \
   lazygit bat wl-clipboard && \
 npm install -g @fsouza/prettierd vscode-langservers-extracted
 
@@ -90,6 +91,7 @@ sudo pacman -S --noconfirm \
   neovim git ripgrep fd curl base-devel pkg-config \
   lua-language-server luacheck luarocks python nodejs npm clang \
   bash-language-server rustup stylua shfmt clang prettier \
+  go gopls zig zls golangci-lint \
   lazygit bat wl-clipboard && \
 npm install -g @fsouza/prettierd vscode-langservers-extracted && \
 yay -S --noconfirm hyprls pyright alejandra
@@ -122,6 +124,8 @@ LSP/Formatter by Language:
   Hyprland      → hyprls (Arch AUR / Debian: build from source)
   Bash          → bash-language-server + shfmt
   Rust          → rust_analyzer (via rustup) + LSP fallback
+  Go            → gopls + goimports/gofmt + golangci-lint
+  Zig           → zls + zig fmt (via zig)
   Tailwind CSS  → tailwindcss (via npm) + prettierd
 
 

@@ -207,6 +207,7 @@ check_and_install_deps() {
     bat
     wl-clipboard
     rustup
+    golang-go
   )
 
   # apt-get installs nothing at all when one name cannot be located, so a single
@@ -252,6 +253,8 @@ check_and_install_deps() {
   build_hyprls
 
   update_treesitter_cli
+
+  install_go_zig_support
 
   install_doc_toolchain
 

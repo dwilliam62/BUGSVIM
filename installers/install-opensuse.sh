@@ -112,6 +112,8 @@ check_and_install_deps() {
     lazygit
     bat
     wl-clipboard
+    go
+    gopls
   )
 
   # zypper installs nothing at all when one name has no provider, so a single
@@ -152,6 +154,8 @@ check_and_install_deps() {
   build_hyprls
 
   update_treesitter_cli
+
+  install_go_zig_support
 
   install_doc_toolchain
 

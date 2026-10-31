@@ -16,6 +16,8 @@ require 'servers.html'(capabilities)
 require 'servers.cssls'(capabilities)
 require 'servers.nil_ls'(capabilities)
 require 'servers.hyprls'(capabilities)
+require 'servers.gopls'(capabilities)
+require 'servers.zls'(capabilities)
 
 -- Enable lsp servers
 vim.lsp.enable {
@@ -30,4 +32,6 @@ vim.lsp.enable {
   'cssls',
   'nil_ls',
   'hyprls',
+  'gopls',
+  'zls',
 }

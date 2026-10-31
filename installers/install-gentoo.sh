@@ -160,6 +160,8 @@ check_and_install_deps() {
     net-libs/nodejs \
     llvm-core/clang \
     sys-apps/bat \
+    dev-lang/go \
+    dev-lang/zig \
     gui-apps/wl-clipboard || true
 
   # lazygit (GURU overlay)
@@ -224,6 +226,8 @@ check_and_install_deps() {
   install_npm_packages prettier @fsouza/prettierd vscode-langservers-extracted bash-language-server
 
   update_treesitter_cli
+
+  install_go_zig_support
 
   install_doc_toolchain
 

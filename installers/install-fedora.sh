@@ -171,6 +171,8 @@ check_and_install_deps() {
     lazygit
     bat
     wl-clipboard
+    golang
+    gopls
   )
 
   # shfmt comes from the vgaetera/extras COPR enabled above. If that COPR has no
@@ -210,6 +212,8 @@ check_and_install_deps() {
   build_hyprls
 
   update_treesitter_cli
+
+  install_go_zig_support
 
   install_doc_toolchain
 

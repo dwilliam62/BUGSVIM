@@ -78,6 +78,11 @@ check_and_install_deps() {
     bat
     wl-clipboard
     py3-ruff
+    go
+    # Alpine ships zig and zls for musl, which is the only usable source there:
+    # the upstream tarballs are glibc-linked.
+    zig
+    zls
   )
   # NOTE: Alpine packages neither lua5.1-luacheck nor pyright (py3-pyright);
   # pyright is installed via pip below.
@@ -119,6 +124,8 @@ check_and_install_deps() {
     neovim
 
   update_treesitter_cli
+
+  install_go_zig_support
 
   install_doc_toolchain
 
