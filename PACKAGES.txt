@@ -123,7 +123,7 @@ LSP/Formatter by Language:
   Nix           → nil + alejandra (Arch AUR / Debian: build)
   Hyprland      → hyprls (Arch AUR / Debian: build from source)
   Bash          → bash-language-server + shfmt
-  Rust          → rust_analyzer (via rustup) + LSP fallback
+  Rust          → rust_analyzer (via rustup) + clippy
   Go            → gopls + goimports/gofmt + golangci-lint
   Zig           → zls + zig fmt (via zig)
   Tailwind CSS  → tailwindcss (via npm) + prettierd

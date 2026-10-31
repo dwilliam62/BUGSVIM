@@ -165,6 +165,9 @@ check_and_install_deps() {
     clang
     clang-tools-extra
     rust
+    # Fedora's rust package ships rustc/cargo only; 'cargo clippy' comes from the
+    # separate clippy package that nvim-lint needs for Rust buffers.
+    clippy
     lua-language-server
     stylua
     shfmt
@@ -214,6 +217,8 @@ check_and_install_deps() {
   update_treesitter_cli
 
   install_go_zig_support
+
+  ensure_rust_clippy
 
   install_doc_toolchain
 

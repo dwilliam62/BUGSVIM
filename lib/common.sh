@@ -466,6 +466,43 @@ install_go_zig_support() {
 }
 
 # ================================================================================================
+# Rust toolchain & clippy
+# ================================================================================================
+# nvim-lint runs 'cargo clippy' for Rust buffers, so clippy has to be on PATH:
+#   - rustup installs it as part of the default profile, but the rustup *package*
+#     ships no toolchain at all ('apt install rustup', 'pacman -S rustup'), so a
+#     stable toolchain may have to be fetched before the component can be added
+#   - the distro packages ship clippy separately: 'clippy' on Fedora and openSUSE,
+#     'rust-clippy' on Alpine and Debian
+# Non-fatal, like the other optional toolchain steps: a missing clippy only means
+# nvim-lint stays quiet for Rust files.
+ensure_rust_clippy() {
+  if command -v cargo-clippy >/dev/null 2>&1 || command -v clippy-driver >/dev/null 2>&1; then
+    log_success "✓ clippy already available"
+    return 0
+  fi
+
+  if command -v rustup >/dev/null 2>&1; then
+    # Without a default toolchain there is no rustc, cargo or component to add.
+    # pipefail is set, so an empty (failing) 'rustup toolchain list' lands here.
+    if ! rustup toolchain list 2>/dev/null | grep -q .; then
+      log_info "No rustup toolchain installed; fetching the stable toolchain (a few hundred MB)..."
+      rustup default stable || true
+    fi
+
+    log_info "Adding the clippy component via rustup..."
+    if rustup component add clippy; then
+      log_success "✓ clippy installed via rustup"
+      return 0
+    fi
+  fi
+
+  log_warn "○ clippy (nvim-lint's Rust linter stays inactive)"
+  log_warn "  Install it with: rustup component add clippy   (or your distro's clippy package)"
+  return 0
+}
+
+# ================================================================================================
 # CLI Argument Parsing & Help
 # ================================================================================================
 
@@ -1247,6 +1284,16 @@ verify_installation() {
       echo -e "  ${GREEN}✓${NC} $cmd"
     else
       echo -e "  ${YELLOW}○${NC} $cmd (not found; the matching LSP/formatter stays inactive)"
+    fi
+  done
+
+  echo ""
+  echo "Checking Rust toolchain (optional):"
+  for cmd in rustc cargo cargo-clippy; do
+    if command -v "$cmd" &>/dev/null; then
+      echo -e "  ${GREEN}✓${NC} $cmd"
+    else
+      echo -e "  ${YELLOW}○${NC} $cmd (not found; nvim-lint stays quiet for Rust files)"
     fi
   done
 

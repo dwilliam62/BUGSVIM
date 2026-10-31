@@ -256,6 +256,8 @@ check_and_install_deps() {
 
   install_go_zig_support
 
+  ensure_rust_clippy
+
   install_doc_toolchain
 
   echo ""

@@ -260,7 +260,7 @@ check_and_install_deps() {
       git ripgrep fd curl jq pkg-config tree-sitter-cli \
       gcc gcc-c++ make automake autoconf \
       lua luarocks lua-language-server python3-devel python3-pip nodejs npm \
-      clang clang-tools-extra rust golang shfmt lazygit bat wl-clipboard || true
+      clang clang-tools-extra rust clippy golang shfmt lazygit bat wl-clipboard || true
 
     log_warn "⚠ rpm-ostree layers only become available after a reboot, so packages layered just now may still show as missing below."
     log_warn "  Reboot, then re-run 'bash install.sh -d' to verify."
@@ -303,6 +303,8 @@ check_and_install_deps() {
   update_treesitter_cli
 
   install_go_zig_support
+
+  ensure_rust_clippy
 
   install_doc_toolchain
 

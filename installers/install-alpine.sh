@@ -68,6 +68,9 @@ check_and_install_deps() {
     nodejs
     npm
     rust
+    # Alpine splits clippy out of the rust package, and nvim-lint runs
+    # 'cargo clippy' for Rust buffers.
+    rust-clippy
     clang
     cmd:clangd
     cmd:clang-format
@@ -126,6 +129,8 @@ check_and_install_deps() {
   update_treesitter_cli
 
   install_go_zig_support
+
+  ensure_rust_clippy
 
   install_doc_toolchain
 

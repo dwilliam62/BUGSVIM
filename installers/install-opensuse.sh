@@ -114,6 +114,11 @@ check_and_install_deps() {
     wl-clipboard
     go
     gopls
+    # openSUSE's rust package is the toolchain meant for build pipelines and
+    # clippy is packaged separately (as on Fedora), so both are listed.
+    rust
+    cargo
+    clippy
   )
 
   # zypper installs nothing at all when one name has no provider, so a single
@@ -156,6 +161,8 @@ check_and_install_deps() {
   update_treesitter_cli
 
   install_go_zig_support
+
+  ensure_rust_clippy
 
   install_doc_toolchain
 

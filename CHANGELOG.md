@@ -37,6 +37,13 @@
   - installers gained the matching packages where they exist: `go gopls zig zls golangci-lint` on Arch, `golang gopls` on Fedora/openSUSE, `go zig zls` on Alpine, `dev-lang/go`/`dev-lang/zig` on Gentoo, `go`/`golang-go`/`golang` on the BSDs, Debian and Bazzite
   - `verify_installation` now reports the Go/Zig toolchain in its own section, so a missing `gopls`/`zls` does not read as a broken core install
   - docs updated: `PACKAGES.txt` and `POST-INSTALL.md` (English)
+- Restored Rust linting: `nvim-lint`'s `rust = { 'clippy' }` had no clippy to run
+  - new `ensure_rust_clippy` step in `lib/common.sh`, called by every distro installer right after the Go/Zig step
+    - rustup-based installs get clippy from the default profile, but the rustup *package* ships no toolchain at all (`apt install rustup`, `pacman -S rustup`), so a stable toolchain is fetched before `rustup component add clippy`
+    - the distros that package clippy separately are now listed: `clippy` on Fedora and Bazzite's rpm-ostree path, `rust cargo clippy` on openSUSE (which installed no Rust at all), `rust-clippy` on Alpine
+  - `verify_installation` gained a Rust section (`rustc`, `cargo`, `cargo-clippy`), so a missing clippy no longer reads as a broken install
+  - known gap left alone: `rust-analyzer` is a separate rustup component and is still not installed, so `servers/rust_analyzer.lua` has no server to start (`rustup component add rust-analyzer`)
+  - docs updated: `PACKAGES.txt` and `POST-INSTALL.md`
 
 # 🚀 **Current Release - v1.0.6**
 

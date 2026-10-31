@@ -219,7 +219,7 @@ but several distributions package something older (Debian trixie ships 0.22.6). 
 installer detects that and installs a newer build into `~/.local/bin` - downloading
 the upstream release binary on Linux, or building it with cargo elsewhere.
 
-### Go and Zig tooling (gopls, zls)
+### Go, Zig and Rust tooling (gopls, zls, clippy)
 
 The installer adds the Go and Zig tooling used by `servers/gopls.lua` and
 `servers/zls.lua`:
@@ -240,6 +240,19 @@ Those upstream zig/zls archives are glibc-only. On Alpine (musl) install the
 programs are skipped - `gopls` needs `go` on PATH to resolve packages anyway.
 
 Skip this step with `INSTALL_GO_ZIG=n bash install.sh -d`.
+
+### Rust toolchain and clippy
+
+`nvim-lint` runs `cargo clippy` for Rust buffers, so a Rust toolchain with clippy
+has to be on PATH. rustup's default profile includes clippy, but the rustup
+*package* provides no toolchain at all (`apt install rustup`, `pacman -S rustup`),
+so the installer fetches the stable toolchain before running
+`rustup component add clippy`. Where clippy is packaged separately it is listed
+directly: `clippy` on Fedora/openSUSE and Bazzite's rpm-ostree path, `rust-clippy`
+on Alpine and Debian.
+
+`rust-analyzer` is a separate rustup component and is still not installed
+automatically - add it with `rustup component add rust-analyzer`.
 
 ## Frequently Asked Questions
 
